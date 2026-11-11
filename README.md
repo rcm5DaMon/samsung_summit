@@ -61,8 +61,10 @@ You can refresh many times a day.
 
 ## Definitions
 - **Store list:** every store in `master_data.target_summit_november`, `master_data.target_aseries_samsung` and
-  `master_data.target_racing_samsung`, **plus every Region 5 site that sold Samsung Device** this month, last month or today
-  and can sell Samsung: business unit 1MULTIBRAND, 5JB, 6OS or 3NASA, or an exhibition (STATUS or CHANNEL = EXHIBITION).
+  `master_data.target_racing_samsung`, **plus every Active store** in `sales_b2c.master_store_r5` (STATUS = Active) in business
+  unit 1MULTIBRAND, 5JB, 6OS or 3NASA (even with no sales, so it shows as inactive), **plus every Region 5 site that sold Samsung
+  Device** this month, last month or today in those business units or an exhibition (STATUS or CHANNEL = EXHIBITION).
+  Closed stores are only included if they still sell Samsung in the window.
   7ERABLUE (no longer sells Samsung) and DCs are never added. New exhibitions or stores are picked up automatically.
   Stores without a target in a view still add their sales to every total (region, BU, LOB, TSH) and show "no target";
   on-track and tier counts only count stores with a target. Site codes are trimmed (the Racing file has `" F285"`).
@@ -71,7 +73,7 @@ You can refresh many times a day.
   - **Tier** is set by the **month-end estimate** (`SUM_month_est_quantity`, S+Z). MTD is still shown next to it:
     estimate below T1 → **Under T1** · passes T1 but below T2 → **Tier 2** · passes T2 but below T3 → **Tier 3** ·
     passes T3 but below T4 → **Tier 4** · passes T4 but below T5 → **Tier 5** · passes T5 → **Above T5**.
-  - **Growth MoM index** = estimate this month ÷ last month's S+Z qty × 100. A store is **growing** when the index is above 100;
+  - **Growth MoM index** = estimate this month ÷ last month's S+Z qty, shown as a ratio (e.g. 1.13). A store is **growing** when the index is above 1;
     stores with no S+Z sales last month are counted separately ("new").
   - **Next** = the tier target to pass next; **To go** = next − estimate (units needed on top of the current pace); **Need/day** = (next − MTD) ÷ days left (incl. today).
   - Region, BU, LOB and TSH rows add up their stores' tier targets and MTD, then apply the same rule (index = summed estimate ÷ summed last month). **Stores by tier**

@@ -308,7 +308,7 @@
 
   <footer>
     <p>Source: BigQuery e-smart-433113 · sales and stock: region_data.sales_vs_stock (completed days to <span class="f-asof"></span>, stock <span class="f-stock"></span>) · today: region_data.sales_daily (PAID POS) · targets: master_data.target_summit_november, master_data.target_aseries_samsung and master_data.target_racing_samsung · store attributes: sales_b2c.master_store_r5.</p>
-    <p>Summit Device = SAMSUNG, Product_Category = Device units excluding Tablet (Detail_Cat = TABLET is left out). A Series = SAMSUNG Device with Detail_Cat = A SERIES. Racing = SAMSUNG Device with Detail_Cat = S SERIES or Z SERIES, 5 tier targets per store reached in order (tier 1 first). Stores = every store in the target files plus every Region 5 site that sold Samsung Device this month, last month or today in business units 1MULTIBRAND, 5JB, 6OS, 3NASA or an exhibition (never 7ERABLUE); stores without a target in a view still add their sales to every total and show "no target". Racing tier is set by the month-end estimate (SUM_month_est_quantity, S+Z): under T1 = "Under T1"; passes T1 but below T2 = "Tier 2"; passes T2 but below T3 = "Tier 3"; passes T3 but below T4 = "Tier 4"; passes T4 but below T5 = "Tier 5"; passes T5 = "Above T5". Racing growth MoM index = estimate ÷ last month S+Z qty × 100; a store is growing when the index is above 100. Group rows (region, BU, LOB, TSH) use summed tier targets, estimates and last-month qty. MTD = SUM_quantity for completed days. Estimate = SUM_month_est_quantity (completed-day run-rate × 30). On track (MTD) = MTD ≥ target × days gone ÷ 30. On track (estimate) = estimate ≥ target. Today = PAID POS orders in sales_daily, only counted when its date is after the last completed day. Gap = target − (MTD + today). Need / day = gap ÷ days left incl. today. Cover (days) = (stock ÷ month-end estimate qty) × 30.42.</p>
+    <p>Summit Device = SAMSUNG, Product_Category = Device units excluding Tablet (Detail_Cat = TABLET is left out). A Series = SAMSUNG Device with Detail_Cat = A SERIES. Racing = SAMSUNG Device with Detail_Cat = S SERIES or Z SERIES, 5 tier targets per store reached in order (tier 1 first). Stores = every store in the target files, plus every Active store (master_store_r5 STATUS = Active) in business units 1MULTIBRAND, 5JB, 6OS, 3NASA, plus every Region 5 site that sold Samsung Device this month, last month or today in those business units or an exhibition (never 7ERABLUE, never DCs); stores without a target in a view still add their sales to every total and show "no target". Racing tier is set by the month-end estimate (SUM_month_est_quantity, S+Z): under T1 = "Under T1"; passes T1 but below T2 = "Tier 2"; passes T2 but below T3 = "Tier 3"; passes T3 but below T4 = "Tier 4"; passes T4 but below T5 = "Tier 5"; passes T5 = "Above T5". Racing growth MoM index = estimate ÷ last month S+Z qty (e.g. 1.13); a store is growing when the index is above 1. Group rows (region, BU, LOB, TSH) use summed tier targets, estimates and last-month qty. MTD = SUM_quantity for completed days. Estimate = SUM_month_est_quantity (completed-day run-rate × 30). On track (MTD) = MTD ≥ target × days gone ÷ 30. On track (estimate) = estimate ≥ target. Today = PAID POS orders in sales_daily, only counted when its date is after the last completed day. Gap = target − (MTD + today). Need / day = gap ÷ days left incl. today. Cover (days) = (stock ÷ month-end estimate qty) × 30.42.</p>
   </footer>
 </div>
 
@@ -420,7 +420,7 @@ function growth(est, lm) {
   return { lm, idx, grow: idx != null && est > lm };
 }
 const idxHtml = (idx) => idx == null ? `<span class="muted" title="No S+Z sales last month">new</span>`
-  : `<span class="${idx > 1 ? "s-good" : "s-crit"}" style="font-weight:650">${idx > 1 ? "▲" : "▼"} ${Math.round(idx * 100)}</span>`;
+  : `<span class="${idx > 1 ? "s-good" : "s-crit"}" style="font-weight:650">${idx > 1 ? "▲" : "▼"} ${idx.toFixed(2)}</span>`;
 
 // ---------- filters ----------
 const PICKS = {
@@ -673,7 +673,7 @@ function racingCard() {
     <div class="label">Racing · S+Z Series · tier by month-end estimate</div>
     <div class="value">${TIER_LBL[o.zone]} <small>est. ${fmt(o.est)} · MTD ${fmt(o.mtd)} · T1 ${fmt(o.tiers[0])} → T5 ${fmt(o.tiers[4])}</small></div>
     <div class="lad" title="Bar = MTD qty · circle = month-end estimate · ticks = tier targets T1..T5"><i style="width:${pos(o.mtd)}%"></i>${ticks}<u style="left:${pos(o.est)}%"></u></div>
-    <div class="foot">Growth MoM index <b>${o.idx == null ? "—" : Math.round(o.idx * 100)}</b> (est. ${fmt(o.est)} ÷ last month ${fmt(o.lm)}) · <span class="s-good">${o.grow}</span> of ${o.n} stores growing</div>
+    <div class="foot">Growth MoM index <b>${o.idx == null ? "—" : o.idx.toFixed(2)}</b> (est. ${fmt(o.est)} ÷ last month ${fmt(o.lm)}) · <span class="s-good">${o.grow}</span> of ${o.n} stores growing</div>
     <div class="est">${o.next != null ? `To reach <b>T${o.zone + 1}</b> (${fmt(o.next)}): <b>+${fmt(o.toNext)}</b> on top of the estimate · ${o.needNext.toFixed(1)}/day from MTD` : `<b>All 5 tiers passed</b> on estimate`}</div></div>`;
 }
 
@@ -714,7 +714,7 @@ function renderPace(rows) {
   if ((D.totalDays - 1) % 5 !== 4) g += `<text x="${x(D.totalDays - 1)}" y="${H - 8}" text-anchor="middle">${D.totalDays}</text>`;
   const todayTxt = D.hasToday ? ` · MTD incl. today ${fmt(c0 + o.today)}` : "";
   const paceLabel = k === "r"
-    ? `T1 ${fmt(o.target)}${o.tiers ? ` … T5 ${fmt(o.tiers[4])}` : ""} · Est. month-end <tspan style="fill:var(--series-1);font-weight:600">${fmt(o.est)} → ${o.hasTier ? TIER_LBL[o.zone] : "—"}</tspan> · index ${o.idx == null ? "—" : Math.round(o.idx * 100)}${todayTxt}`
+    ? `T1 ${fmt(o.target)}${o.tiers ? ` … T5 ${fmt(o.tiers[4])}` : ""} · Est. month-end <tspan style="fill:var(--series-1);font-weight:600">${fmt(o.est)} → ${o.hasTier ? TIER_LBL[o.zone] : "—"}</tspan> · index ${o.idx == null ? "—" : o.idx.toFixed(2)}${todayTxt}`
     : `Target ${fmt(o.target)} · Est. month-end <tspan style="fill:var(--series-1);font-weight:600">${fmt(o.est)} (${pct(o.estAchv)})</tspan>${todayTxt}`;
   g += `<line x1="${x(-0.5)}" y1="${y(0)}" x2="${x(D.totalDays - 0.5)}" y2="${y(o.target)}" stroke="var(--target)" stroke-width="2" stroke-dasharray="5 4"/>
         ${k === "r" && o.tiers ? o.tiers.slice(1).map((tv, i) => `<line x1="${x(-0.5)}" y1="${y(0)}" x2="${x(D.totalDays - 0.5)}" y2="${y(tv)}" stroke="var(--target)" stroke-width="1" stroke-dasharray="2 4" opacity=".7"/>
@@ -777,7 +777,7 @@ function renderTsh() {
       <line x1="${x(expFrac)}" x2="${x(expFrac)}" y1="${yy - 3}" y2="${yy + 17}" stroke="var(--text-primary)" stroke-width="2"/>
       <circle cx="${x(o.estAchv)}" cy="${yy + 7}" r="4" fill="var(--surface-1)" stroke="var(--series-1)" stroke-width="2" opacity="${sel ? 1 : 0.5}"/>
       <text x="${W - m.r + 10}" y="${yy + 9}" style="fill:var(--text-primary);font-weight:600">${state.prog === "r" ? TIER_LBL[o.zone] : pct(o.achv)}</text>
-      <text x="${W - m.r + 10}" y="${yy + 22}">${state.prog === "r" ? `idx ${o.idx == null ? "—" : Math.round(o.idx * 100)}` : `est ${pct(o.estAchv)}`}</text>
+      <text x="${W - m.r + 10}" y="${yy + 22}">${state.prog === "r" ? `idx ${o.idx == null ? "—" : o.idx.toFixed(2)}` : `est ${pct(o.estAchv)}`}</text>
       <rect x="0" y="${yy - 6}" width="${W}" height="${rowH}" fill="transparent" data-i="${i}" class="hit" style="cursor:pointer"/>`;
   });
   svg.innerHTML = g;
@@ -905,7 +905,7 @@ function renderReview(rows) {
 function renderReviewRacing(rows) {
   const t = document.getElementById("revTable"), top = topModels(rows.length ? rows : STORES);
   document.getElementById("reviewNote").innerHTML = `Racing (S+Z Series) · ${rows.length} stores. <b>Tier</b> from the month-end estimate: under T1 → <i>Under T1</i>; passes T1 but below T2 → <i>Tier 2</i>; … passes T5 → <i>Above T5</i>. ` +
-    `<b>To go</b> = next tier − estimate · <b>Need/day</b> = (next tier − MTD) ÷ ${D.remDays} days · <b>Index</b> = estimate ÷ last month × 100. Group rows (LOB, TSH, total) use summed targets and qty; ` +
+    `<b>To go</b> = next tier − estimate · <b>Need/day</b> = (next tier − MTD) ÷ ${D.remDays} days · <b>Index</b> = estimate ÷ last month (above 1 = growing). Group rows (LOB, TSH, total) use summed targets and qty; ` +
     `the right column shows stores by tier (Under T1 · Tier 2 … Above T5), or the store's own T1 → T5 ladder (blue = passed by the estimate).`;
   const cols = [["name", "LOB / TSH / Store", "l", ""], ["n", "Stores", "", ""],
     ["r1", "T1", "bl", "Tier targets"], ["r2", "T2", "", ""], ["r3", "T3", "", ""], ["r4", "T4", "", ""], ["r5", "T5", "", ""],
@@ -1031,7 +1031,7 @@ function renderBreakdownRacing(rows) {
   const tot = sumMetrics(rows, "r");
   document.getElementById("brkNote").innerHTML = `${tot.withT} stores with a Racing target in the current filter. Tier targets are summed per row. ` +
     `<b>Tier</b> from the month-end estimate: est. under T1 → <i>Under T1</i>; passes T1 but below T2 → <i>Tier 2</i>; … passes T4 but below T5 → <i>Tier 5</i>; passes T5 → <i>Above T5</i>. ` +
-    `<b>To go</b> = next tier − estimate; <b>Need/day</b> = (next tier − MTD) ÷ ${D.remDays} days. <b>Growth index</b> = estimate ÷ last month S+Z × 100 (▲ above 100 = growing); <b>Growing</b> = stores growing / stores. Click a row to filter, a column to sort.`;
+    `<b>To go</b> = next tier − estimate; <b>Need/day</b> = (next tier − MTD) ÷ ${D.remDays} days. <b>Growth index</b> = estimate ÷ last month S+Z (▲ above 1 = growing); <b>Growing</b> = stores growing / stores. Click a row to filter, a column to sort.`;
   const th = (k, l, c = "", g = "") => `<th data-k="${k}" class="${c}${g ? " gstart" : ""}" ${sk === k ? `aria-sort="${state.bDir === "asc" ? "ascending" : "descending"}"` : ""}><span class="grp">${g || "&nbsp;"}</span>${l}</th>`;
   t.tHead.innerHTML = `<tr>${keys.map(([, l], i) => th(i === keys.length - 1 ? "name" : "", l, "l")).join("")}${th("n", "Stores")}
     ${th("r1", "T1", "bl", "Tier targets")}${th("r2", "T2")}${th("r3", "T3")}${th("r4", "T4")}${th("r5", "T5")}
