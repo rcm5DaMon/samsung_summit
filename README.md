@@ -1,4 +1,4 @@
-# Samsung Summit · November dashboard (Erajaya Region 5)
+# Samsung Targets · Summit · A Series · Racing — November dashboard (Erajaya Region 5)
 
 A static web dashboard (GitHub Pages) using **import mode** like Power BI. One BigQuery query pulls a small,
 pre-aggregated extract (`data/summit.json`, about 75 KB). Every filter, drill-down and hover then runs in the
@@ -38,7 +38,7 @@ You can refresh many times a day.
   then run the workflow.
 
 ## What's on the page
-- **Target switch:** Summit Device or A Series. **Filters:** Business unit → LOB → TSH (cascading) and store search.
+- **Target switch:** Summit Device, A Series or Racing (S+Z Series tiers). **Filters:** Business unit → LOB → TSH (cascading) and store search.
 - **KPI cards:**
   - Achievement for both targets: MTD, estimate, and incl. today.
   - Stores on track (MTD and estimate).
@@ -61,9 +61,19 @@ You can refresh many times a day.
 - **Save PNG / Copy image** for WhatsApp.
 
 ## Definitions
-- **Store list:** every store in `master_data.target_summit_november` and `master_data.target_aseries_samsung` (151 stores).
+- **Store list:** every store in `master_data.target_summit_november`, `master_data.target_aseries_samsung` (151 stores each)
+  and `master_data.target_racing_samsung` (153 stores, of which 142 have a non-zero tier). Each view only uses the stores in its own file.
+  Site codes are trimmed (the Racing file has `" F285"` with a leading space).
   Business unit (`BU_CATEGORY`), LOB, TSH and channel come from `sales_b2c.master_store_r5`.
 - **Summit Device:** `brandname = SAMSUNG`, `Product_Category = Device`. **A Series:** the same with `Detail_Cat = A SERIES`.
+- **Racing:** the same with `Detail_Cat` in `S SERIES`, `Z SERIES`. Each store has 5 tier targets, reached in order (tier 1 first).
+  - **Current tier** is set by **MTD qty** (`SUM_quantity`, completed days; no estimate):
+    MTD below T1 → **Under T1** · passed T1 but below T2 → **Tier 2** · passed T2 but below T3 → **Tier 3** ·
+    passed T3 but below T4 → **Tier 4** · passed T4 but below T5 → **Tier 5** · passed T5 → **Above T5**. Reaching a tier exactly counts as passing it.
+  - **Next** = the tier target to pass next; **To go** = next − MTD; **Need/day** = to go ÷ days left (incl. today).
+  - Region, BU, LOB and TSH rows add up their stores' tier targets and MTD, then apply the same rule. **Stores by tier**
+    counts how many stores are in each bracket (Under T1 · Tier 2 · Tier 3 · Tier 4 · Tier 5 · Above T5).
+  - Stores whose 5 tiers are all 0 (11 stores) have no Racing target and are left out of the Racing view.
 - **MTD:** `SUM_quantity` from `region_data.sales_vs_stock` for completed days, 1 Nov to the last loaded day.
 - **Month-end estimate:** `SUM_month_est_quantity` from the same table. It equals MTD ÷ completed days × 30.
 - **On track (MTD):** MTD ≥ target × completed days ÷ 30. Status colours: on track ≥ 100% of pace, slightly behind 80–99%, behind < 80%.
