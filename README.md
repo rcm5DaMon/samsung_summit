@@ -64,13 +64,15 @@ You can refresh many times a day.
   and `master_data.target_racing_samsung` (153 stores, of which 142 have a non-zero tier). Each view only uses the stores in its own file.
   Site codes are trimmed (the Racing file has `" F285"` with a leading space).
   Business unit (`BU_CATEGORY`), LOB, TSH and channel come from `sales_b2c.master_store_r5`.
-- **Summit Device:** `brandname = SAMSUNG`, `Product_Category = Device`. **A Series:** the same with `Detail_Cat = A SERIES`.
+- **Summit Device:** `brandname = SAMSUNG`, `Product_Category = Device`, **excluding Tablet** (`Detail_Cat <> TABLET`). **A Series:** the same with `Detail_Cat = A SERIES`.
 - **Racing:** the same with `Detail_Cat` in `S SERIES`, `Z SERIES`. Each store has 5 tier targets, reached in order (tier 1 first).
-  - **Current tier** is set by **MTD qty** (`SUM_quantity`, completed days; no estimate):
-    MTD below T1 → **Under T1** · passed T1 but below T2 → **Tier 2** · passed T2 but below T3 → **Tier 3** ·
-    passed T3 but below T4 → **Tier 4** · passed T4 but below T5 → **Tier 5** · passed T5 → **Above T5**. Reaching a tier exactly counts as passing it.
-  - **Next** = the tier target to pass next; **To go** = next − MTD; **Need/day** = to go ÷ days left (incl. today).
-  - Region, BU, LOB and TSH rows add up their stores' tier targets and MTD, then apply the same rule. **Stores by tier**
+  - **Tier** is set by the **month-end estimate** (`SUM_month_est_quantity`, S+Z). MTD is still shown next to it:
+    estimate below T1 → **Under T1** · passes T1 but below T2 → **Tier 2** · passes T2 but below T3 → **Tier 3** ·
+    passes T3 but below T4 → **Tier 4** · passes T4 but below T5 → **Tier 5** · passes T5 → **Above T5**.
+  - **Growth MoM index** = estimate this month ÷ last month's S+Z qty × 100. A store is **growing** when the index is above 100;
+    stores with no S+Z sales last month are counted separately ("new").
+  - **Next** = the tier target to pass next; **To go** = next − estimate (units needed on top of the current pace); **Need/day** = (next − MTD) ÷ days left (incl. today).
+  - Region, BU, LOB and TSH rows add up their stores' tier targets and MTD, then apply the same rule (index = summed estimate ÷ summed last month). **Stores by tier**
     counts how many stores are in each bracket (Under T1 · Tier 2 · Tier 3 · Tier 4 · Tier 5 · Above T5).
   - Stores whose 5 tiers are all 0 (11 stores) have no Racing target and are left out of the Racing view.
 - **MTD:** `SUM_quantity` from `region_data.sales_vs_stock` for completed days, 1 Nov to the last loaded day.

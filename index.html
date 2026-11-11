@@ -181,7 +181,7 @@
   tr.st { cursor: pointer; }
   tr.st:hover td { background: var(--surface-0); }
   tr.st.sel td { background: var(--series-1-soft); }
-  td.name { max-width: 250px; overflow: hidden; text-overflow: ellipsis; }
+  td.name { max-width: 225px; overflow: hidden; text-overflow: ellipsis; }
   .caret { display: inline-block; width: 14px; color: var(--text-muted); font-size: 10px; }
   .site { color: var(--text-muted); font-size: 12px; margin-right: 6px; font-weight: 400; }
   .lvl { font-size: 10px; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: .04em; margin-right: 6px; }
@@ -212,7 +212,7 @@
 
   <div class="filters" role="group" aria-label="Filters">
     <span class="seg" role="group" aria-label="Target">
-      <button type="button" data-prog="all" aria-pressed="true" title="Target Summit: all Samsung Device units">Summit Device</button>
+      <button type="button" data-prog="all" aria-pressed="true" title="Target Summit: Samsung Device units excluding Tablet">Summit Device</button>
       <button type="button" data-prog="a" aria-pressed="false" title="Target A Series: Samsung Device, Detail_Cat = A SERIES">A Series</button>
       <button type="button" data-prog="r" aria-pressed="false" title="Target Racing: Samsung Device, Detail_Cat = S SERIES or Z SERIES, 5 tiers">Racing · S+Z</button>
     </span>
@@ -308,7 +308,7 @@
 
   <footer>
     <p>Source: BigQuery e-smart-433113 · sales and stock: region_data.sales_vs_stock (completed days to <span class="f-asof"></span>, stock <span class="f-stock"></span>) · today: region_data.sales_daily (PAID POS) · targets: master_data.target_summit_november, master_data.target_aseries_samsung and master_data.target_racing_samsung · store attributes: sales_b2c.master_store_r5.</p>
-    <p>Summit Device = all SAMSUNG, Product_Category = Device units. A Series = SAMSUNG Device with Detail_Cat = A SERIES. Racing = SAMSUNG Device with Detail_Cat = S SERIES or Z SERIES, 5 tier targets per store reached in order (tier 1 first); stores whose 5 tiers are all 0 have no Racing target and are left out of the Racing view. Racing current tier is set by MTD qty (completed days): under T1 = "Under T1"; passed T1 but below T2 = "Tier 2"; passed T2 but below T3 = "Tier 3"; passed T3 but below T4 = "Tier 4"; passed T4 but below T5 = "Tier 5"; passed T5 = "Above T5". Group rows (region, BU, LOB, TSH) compare summed MTD with summed tier targets. MTD = SUM_quantity for completed days. Estimate = SUM_month_est_quantity (completed-day run-rate × 30). On track (MTD) = MTD ≥ target × days gone ÷ 30. On track (estimate) = estimate ≥ target. Today = PAID POS orders in sales_daily, only counted when its date is after the last completed day. Gap = target − (MTD + today). Need / day = gap ÷ days left incl. today. Cover (days) = (stock ÷ month-end estimate qty) × 30.42.</p>
+    <p>Summit Device = SAMSUNG, Product_Category = Device units excluding Tablet (Detail_Cat = TABLET is left out). A Series = SAMSUNG Device with Detail_Cat = A SERIES. Racing = SAMSUNG Device with Detail_Cat = S SERIES or Z SERIES, 5 tier targets per store reached in order (tier 1 first); stores whose 5 tiers are all 0 have no Racing target and are left out of the Racing view. Racing tier is set by the month-end estimate (SUM_month_est_quantity, S+Z): under T1 = "Under T1"; passes T1 but below T2 = "Tier 2"; passes T2 but below T3 = "Tier 3"; passes T3 but below T4 = "Tier 4"; passes T4 but below T5 = "Tier 5"; passes T5 = "Above T5". Racing growth MoM index = estimate ÷ last month S+Z qty × 100; a store is growing when the index is above 100. Group rows (region, BU, LOB, TSH) use summed tier targets, estimates and last-month qty. MTD = SUM_quantity for completed days. Estimate = SUM_month_est_quantity (completed-day run-rate × 30). On track (MTD) = MTD ≥ target × days gone ÷ 30. On track (estimate) = estimate ≥ target. Today = PAID POS orders in sales_daily, only counted when its date is after the last completed day. Gap = target − (MTD + today). Need / day = gap ÷ days left incl. today. Cover (days) = (stock ÷ month-end estimate qty) × 30.42.</p>
   </footer>
 </div>
 
@@ -316,9 +316,9 @@
 // ===== Config: the "Refresh data" button opens this repo's workflow =====
 const GITHUB_REPO = "rcm5DaMon/samsung_summit";
 
-const PROG = { all: "Summit Device", a: "A Series", r: "Racing (S+Z)" };
+const PROG = { all: "Summit Device (excl. Tablet)", a: "A Series", r: "Racing (S+Z)" };
 const KI = { all: 0, a: 1, r: 2 };                       // index into each store's daily [all, a, r]
-const progCat = (cat, k = state.prog) => k === "all" || (k === "a" ? cat === "A" : cat === "S" || cat === "Z");
+const progCat = (cat, k = state.prog) => k === "all" ? cat !== "T" : k === "a" ? cat === "A" : cat === "S" || cat === "Z";   // Summit excludes Tablet
 // Racing current tier, from MTD qty (completed days):
 //   MTD < T1 -> "Under T1" · T1 <= MTD < T2 -> "Tier 2" · ... · T4 <= MTD < T5 -> "Tier 5" · MTD >= T5 -> "Above T5"
 // zone = number of tier targets already passed (0..5)
@@ -377,11 +377,13 @@ function prep(j) {
   split(j.mix).forEach(([site, cat, model, variant, mtd, tod, stk, est]) => {
     const s = map.get(site); if (!s) return;
     s.models.push({ cat, model, variant: variant || model, mtd: +mtd, today: +tod, stock: +stk, est: +(est || 0) });
-    s.today.all += +tod; s.stock.all += +stk;
+    if (cat !== "T") { s.today.all += +tod; s.stock.all += +stk; }        // Summit excludes Tablet
     if (cat === "A") { s.today.a += +tod; s.stock.a += +stk; }
     if (cat === "S" || cat === "Z") { s.today.r += +tod; s.stock.r += +stk; }
   });
   split(j.today_any).forEach(([site, n]) => { const s = map.get(site); if (s) s.orders = +n; });
+  STORES.forEach((s) => { s.lm = 0; });
+  split(j.lm).forEach(([site, q]) => { const s = map.get(site); if (s) s.lm = +q; });   // last month S+Z qty
   const dcName = new Map(split(j.dcs).map(([site, name, bu]) => [site, { name, bu }]));
   const dcStock = split(j.dc_stock).map(([site, cat, model, variant, q]) => ({ site, cat, model, variant: variant || model, q: +q, ...(dcName.get(site) || { name: site, bu: "" }) }));
   return { j, start, end, totalDays, doneDays, remDays, hasToday, dcStock };
@@ -398,17 +400,25 @@ function metrics(s, k = state.prog) {
     achv: target ? mtd / target : null, achvT: target ? tot / target : null, estAchv: target ? est / target : null,
     onMtd: target > 0 && pace >= 1, onEst: target > 0 && est >= target,
     need: gap / D.remDays, cover: coverOf(stock, est), short: target > 0 && stock < gap,
-    inactive: D.hasToday && today <= 0, noTrx: D.hasToday && s.orders === 0, ...(k === "r" ? tierFields(s.tiers, mtd) : {}) };
+    inactive: D.hasToday && today <= 0, noTrx: D.hasToday && s.orders === 0, ...(k === "r" ? { ...tierFields(s.tiers, est, mtd), ...growth(est, s.lm) } : {}) };
 }
-// Racing: current tier from MTD qty, the next tier target to pass, and what it takes to pass it
-function tierFields(tiers, mtd) {
+// Racing: current tier from the month-end ESTIMATE (SUM_month_est_quantity), the next tier to pass, and what it takes
+function tierFields(tiers, est, mtd) {
   const has = tiers.some((v) => v > 0);
   if (!has) return { tiers, hasTier: false, zone: null, next: null, toNext: 0, needNext: 0 };
-  const zone = tierOf(mtd, tiers);
+  const zone = tierOf(est, tiers);
   const next = zone < 5 ? tiers[zone] : null;                     // the tier target to pass next (T1 when under T1)
-  const toNext = next != null ? Math.max(0, next - mtd) : 0;      // units still to sell to pass it
-  return { tiers, hasTier: true, zone, next, toNext, needNext: toNext / D.remDays };
+  return { tiers, hasTier: true, zone, next,
+    toNext: next != null ? Math.max(0, next - est) : 0,            // units needed on top of the estimate
+    needNext: next != null ? Math.max(0, next - mtd) / D.remDays : 0 };   // per day from MTD to actually reach it
 }
+// Racing growth MoM index = month estimate this month / last month qty (S+Z)
+function growth(est, lm) {
+  const idx = lm > 0 ? est / lm : null;
+  return { lm, idx, grow: idx != null && est > lm };
+}
+const idxHtml = (idx) => idx == null ? `<span class="muted" title="No S+Z sales last month">new</span>`
+  : `<span class="${idx > 1 ? "s-good" : "s-crit"}" style="font-weight:650">${idx > 1 ? "▲" : "▼"} ${Math.round(idx * 100)}</span>`;
 
 // ---------- filters ----------
 const PICKS = {
@@ -416,7 +426,10 @@ const PICKS = {
   estOn: ["on track (estimate)", (m) => m.onEst], estOff: ["not on track (estimate)", (m) => !m.onEst],
   inact: () => [`with no ${PROG[state.prog]} sale today`, (m) => m.inactive], noTrx: ["with no transaction at all today", (m) => m.noTrx],
   short: ["with stock below remaining gap", (m) => m.short],
-  ...Object.fromEntries([0, 1, 2, 3, 4, 5].map((t) => ["tier" + t, [`currently in ${TIER_LBL[t]} (Racing, MTD)`, (m) => m.hasTier && m.zone === t]])),
+  growUp: ["growing MoM (Racing estimate above last month)", (m) => m.hasTier && m.grow],
+  growDown: ["not growing MoM (Racing estimate at or below last month)", (m) => m.hasTier && m.idx != null && !m.grow],
+  noLm: ["with no S+Z sales last month (Racing)", (m) => m.hasTier && m.idx == null],
+  ...Object.fromEntries([0, 1, 2, 3, 4, 5].map((t) => ["tier" + t, [`in ${TIER_LBL[t]} by month-end estimate (Racing)`, (m) => m.hasTier && m.zone === t]])),
 };
 const pickDef = (k) => typeof PICKS[k] === "function" ? PICKS[k]() : PICKS[k];
 
@@ -584,8 +597,10 @@ function sumMetrics(rows, k = state.prog) {
   o.gapAgg = Math.max(0, o.target - o.tot);
   if (k === "r") {
     const tiers = [0, 0, 0, 0, 0]; o.byTier = [0, 0, 0, 0, 0, 0];
-    rows.forEach((s) => { const m = metrics(s, "r"); if (!m.hasTier) return; s.tiers.forEach((v, i) => tiers[i] += v); o.byTier[m.zone]++; });
-    Object.assign(o, tierFields(tiers, o.mtd));
+    let lm = 0; o.grow = 0; o.notGrow = 0; o.noLm = 0;
+    rows.forEach((s) => { const m = metrics(s, "r"); if (!m.hasTier) return; s.tiers.forEach((v, i) => tiers[i] += v); o.byTier[m.zone]++;
+      lm += s.lm; if (m.idx == null) o.noLm++; else if (m.grow) o.grow++; else o.notGrow++; });
+    Object.assign(o, tierFields(tiers, o.est, o.mtd), { lm, idx: lm > 0 ? o.est / lm : null });
   }
   return o;
 }
@@ -605,9 +620,13 @@ function renderKpis(rows) {
   };
   const o = sumMetrics(rows), P = PROG[state.prog], isR = state.prog === "r";
   const btn = (k, n, dis) => `<button type="button" data-pick="${k}" aria-pressed="${state.pick === k}" ${dis ? "disabled" : ""}><b>${dis ? "—" : fmt(n)}</b></button>`;
-  const zoneTxt = ["MTD below T1", "passed T1, below T2", "passed T2, below T3", "passed T3, below T4", "passed T4, below T5", "passed T5"];
-  const track = isR ? `<div class="card kpi"><div class="label">Stores by current tier (MTD) · Racing</div>
-      <div class="pick">${[5, 4, 3, 2, 1, 0].map((t) => `${btn("tier" + t, o.byTier[t])}<span>${tierHtml(t)} ${zoneTxt[t]}</span>`).join("")}</div>
+  const zoneTxt = ["est. below T1", "est. passes T1, below T2", "est. passes T2, below T3", "est. passes T3, below T4", "est. passes T4, below T5", "est. passes T5"];
+  const track = isR ? `<div class="card kpi"><div class="label">Stores by tier (estimate) · growth MoM</div>
+      <div class="pick">${[5, 4, 3, 2, 1, 0].map((t) => `${btn("tier" + t, o.byTier[t])}<span>${tierHtml(t)} ${zoneTxt[t]}</span>`).join("")}
+        <div class="sep"></div>
+        ${btn("growUp", o.grow)}<span class="s-good">▲ growing MoM (est. &gt; last month)</span>
+        ${btn("growDown", o.notGrow)}<span class="s-crit">▼ not growing</span>
+        ${o.noLm ? `${btn("noLm", o.noLm)}<span class="muted">no S+Z sales last month</span>` : ""}</div>
       <div class="foot">of ${fmt(o.withT)} stores with a Racing target · click a number to list them</div></div>`
     : `<div class="card kpi"><div class="label">Stores on track · ${P}</div>
       <div class="pick">
@@ -620,7 +639,7 @@ function renderKpis(rows) {
   const today = `<div class="card kpi"><div class="label">Today so far · ${P}</div>
       <div class="value">${D.hasToday ? fmt(o.today) : "—"} <small>units</small></div>
       <div class="foot">${D.hasToday ? `POS until ${D.j.today_last_time.slice(0, 5)} WIB · ${fmt(o.n - o.inactive)} stores sold` : "Today's POS not loaded yet"}</div>
-      <div class="est">${isR && o.next != null ? `Need <b>${o.needNext.toFixed(1)}</b>/day to pass T${o.zone + 1}` : `Need <b>${needDay.toFixed(1)}</b>/day`} · run-rate <b>${runRate.toFixed(1)}</b>/day</div></div>`;
+      <div class="est">${isR && o.next != null ? `Need <b>${o.needNext.toFixed(1)}</b>/day to reach T${o.zone + 1}` : `Need <b>${needDay.toFixed(1)}</b>/day`} · run-rate <b>${runRate.toFixed(1)}</b>/day</div></div>`;
   const inact = `<div class="card kpi"><div class="label">Inactive stores today</div>
       <div class="pick">
         ${btn("inact", o.inactive, !D.hasToday)}<span>no ${P} sale yet · of ${fmt(o.n)}</span>
@@ -641,18 +660,18 @@ function renderKpis(rows) {
   });
 }
 
-// Racing region card: current tier from MTD on a T1..T5 ladder
+// Racing region card: tier from the month-end estimate on a T1..T5 ladder, MTD, and growth MoM
 function racingCard() {
   const o = sumMetrics(scopeStores("r"), "r"), sel = state.prog === "r";
-  if (!o.hasTier) return `<div class="card kpi prog${sel ? " sel" : ""}" data-progcard="r" style="cursor:pointer"><div class="label">Racing · S+Z Series · current tier</div><div class="value">—</div><div class="foot">No Racing target for this filter</div></div>`;
-  const max = Math.max(o.tiers[4], o.mtd) * 1.06, pos = (v) => Math.min(100, v / max * 100);
+  if (!o.hasTier) return `<div class="card kpi prog${sel ? " sel" : ""}" data-progcard="r" style="cursor:pointer"><div class="label">Racing · S+Z Series · tier</div><div class="value">—</div><div class="foot">No Racing target for this filter</div></div>`;
+  const max = Math.max(o.tiers[4], o.est, o.mtd) * 1.06, pos = (v) => Math.min(100, v / max * 100);
   const ticks = o.tiers.map((v, i) => `<b style="left:${pos(v)}%"><span>T${i + 1}</span></b>`).join("");
   return `<div class="card kpi prog${sel ? " sel" : ""}" data-progcard="r" style="cursor:pointer" title="Click to review Racing">
-    <div class="label">Racing · S+Z Series · current tier (MTD)</div>
-    <div class="value">${TIER_LBL[o.zone]} <small>MTD ${fmt(o.mtd)} · T1 ${fmt(o.tiers[0])} → T5 ${fmt(o.tiers[4])}</small></div>
-    <div class="lad" title="Bar = MTD qty · ticks = tier targets T1..T5"><i style="width:${pos(o.mtd)}%"></i>${ticks}</div>
-    <div class="foot">${tierHtml(o.zone)} · MTD ${fmt(o.mtd)} = ${pct(o.mtd / o.tiers[0])} of T1${D.hasToday ? ` · today +${fmt(o.today)} so far` : ""}</div>
-    <div class="est">${o.next != null ? `To pass <b>T${o.zone + 1}</b> (${fmt(o.next)}): <b>${fmt(o.toNext)}</b> units to go · <b>${o.needNext.toFixed(1)}</b>/day for ${D.remDays} days` : `<b>All 5 tiers passed</b>`}</div></div>`;
+    <div class="label">Racing · S+Z Series · tier by month-end estimate</div>
+    <div class="value">${TIER_LBL[o.zone]} <small>est. ${fmt(o.est)} · MTD ${fmt(o.mtd)} · T1 ${fmt(o.tiers[0])} → T5 ${fmt(o.tiers[4])}</small></div>
+    <div class="lad" title="Bar = MTD qty · circle = month-end estimate · ticks = tier targets T1..T5"><i style="width:${pos(o.mtd)}%"></i>${ticks}<u style="left:${pos(o.est)}%"></u></div>
+    <div class="foot">Growth MoM index <b>${o.idx == null ? "—" : Math.round(o.idx * 100)}</b> (est. ${fmt(o.est)} ÷ last month ${fmt(o.lm)}) · <span class="s-good">${o.grow}</span> of ${o.withT} stores growing</div>
+    <div class="est">${o.next != null ? `To reach <b>T${o.zone + 1}</b> (${fmt(o.next)}): <b>+${fmt(o.toNext)}</b> on top of the estimate · ${o.needNext.toFixed(1)}/day from MTD` : `<b>All 5 tiers passed</b> on estimate`}</div></div>`;
 }
 
 // DC pool for the stores in view: NASA DCs serve 3NASA (Samsung stores); Erafone DCs serve the other BUs
@@ -692,7 +711,7 @@ function renderPace(rows) {
   if ((D.totalDays - 1) % 5 !== 4) g += `<text x="${x(D.totalDays - 1)}" y="${H - 8}" text-anchor="middle">${D.totalDays}</text>`;
   const todayTxt = D.hasToday ? ` · MTD incl. today ${fmt(c0 + o.today)}` : "";
   const paceLabel = k === "r"
-    ? `T1 ${fmt(o.target)}${o.tiers ? ` … T5 ${fmt(o.tiers[4])}` : ""} · MTD <tspan style="fill:var(--series-1);font-weight:600">${fmt(c0)} → ${o.hasTier ? TIER_LBL[o.zone] : "—"}</tspan>${todayTxt}`
+    ? `T1 ${fmt(o.target)}${o.tiers ? ` … T5 ${fmt(o.tiers[4])}` : ""} · Est. month-end <tspan style="fill:var(--series-1);font-weight:600">${fmt(o.est)} → ${o.hasTier ? TIER_LBL[o.zone] : "—"}</tspan> · index ${o.idx == null ? "—" : Math.round(o.idx * 100)}${todayTxt}`
     : `Target ${fmt(o.target)} · Est. month-end <tspan style="fill:var(--series-1);font-weight:600">${fmt(o.est)} (${pct(o.estAchv)})</tspan>${todayTxt}`;
   g += `<line x1="${x(-0.5)}" y1="${y(0)}" x2="${x(D.totalDays - 0.5)}" y2="${y(o.target)}" stroke="var(--target)" stroke-width="2" stroke-dasharray="5 4"/>
         ${k === "r" && o.tiers ? o.tiers.slice(1).map((tv, i) => `<line x1="${x(-0.5)}" y1="${y(0)}" x2="${x(D.totalDays - 0.5)}" y2="${y(tv)}" stroke="var(--target)" stroke-width="1" stroke-dasharray="2 4" opacity=".7"/>
@@ -732,7 +751,7 @@ function renderPace(rows) {
 
 function renderTsh() {
   document.getElementById("tshNote").textContent = state.prog === "r"
-    ? "Bar = MTD vs tier 1 · black tick = time gone · right: current tier from MTD · click a TSH to filter"
+    ? "Bar = MTD vs tier 1 · tick = time gone · ○ = estimate vs tier 1 · right: tier by estimate and growth index · click a TSH to filter"
     : "Bar = MTD achievement · black tick = time gone · ○ = month-end estimate · click a TSH to filter";
   const svg = document.getElementById("tshChart"), box = document.getElementById("tshBox");
   const base = STORES.filter((s) => s.inProg[state.prog] && (!state.bu || s.bu === state.bu) && (!state.lob || s.lob === state.lob));
@@ -750,12 +769,12 @@ function renderTsh() {
   list.forEach((o, i) => {
     const yy = m.t + i * rowH + 6, sel = storeTsh ? storeTsh === o.tsh : (!state.tsh || state.tsh === o.tsh);
     g += `<text x="${m.l - 8}" y="${yy + 9}" text-anchor="end" style="fill:var(--text-primary)">${esc(twoWords(o.tsh))}</text>
-      <text x="${m.l - 8}" y="${yy + 22}" text-anchor="end">${state.prog === "r" ? `${o.withT - o.byTier[0]}/${o.withT} passed T1` : `${o.onMtd}/${o.withT} on track`}</text>
+      <text x="${m.l - 8}" y="${yy + 22}" text-anchor="end">${state.prog === "r" ? `${o.grow}/${o.withT} growing MoM` : `${o.onMtd}/${o.withT} on track`}</text>
       <rect x="${m.l}" y="${yy}" width="${Math.max(2, x(o.achv) - m.l)}" height="14" rx="4" fill="var(--series-1)" opacity="${sel ? 1 : 0.35}"/>
       <line x1="${x(expFrac)}" x2="${x(expFrac)}" y1="${yy - 3}" y2="${yy + 17}" stroke="var(--text-primary)" stroke-width="2"/>
-      ${state.prog === "r" ? "" : `<circle cx="${x(o.estAchv)}" cy="${yy + 7}" r="4" fill="var(--surface-1)" stroke="var(--series-1)" stroke-width="2" opacity="${sel ? 1 : 0.5}"/>`}
-      <text x="${W - m.r + 10}" y="${yy + 9}" style="fill:var(--text-primary);font-weight:600">${pct(o.achv)}</text>
-      <text x="${W - m.r + 10}" y="${yy + 22}">${state.prog === "r" ? TIER_LBL[o.zone] : `est ${pct(o.estAchv)}`}</text>
+      <circle cx="${x(o.estAchv)}" cy="${yy + 7}" r="4" fill="var(--surface-1)" stroke="var(--series-1)" stroke-width="2" opacity="${sel ? 1 : 0.5}"/>
+      <text x="${W - m.r + 10}" y="${yy + 9}" style="fill:var(--text-primary);font-weight:600">${state.prog === "r" ? TIER_LBL[o.zone] : pct(o.achv)}</text>
+      <text x="${W - m.r + 10}" y="${yy + 22}">${state.prog === "r" ? `idx ${o.idx == null ? "—" : Math.round(o.idx * 100)}` : `est ${pct(o.estAchv)}`}</text>
       <rect x="0" y="${yy - 6}" width="${W}" height="${rowH}" fill="transparent" data-i="${i}" class="hit" style="cursor:pointer"/>`;
   });
   svg.innerHTML = g;
@@ -882,31 +901,32 @@ function renderReview(rows) {
 
 function renderReviewRacing(rows) {
   const t = document.getElementById("revTable"), top = topModels(rows.length ? rows : STORES);
-  document.getElementById("reviewNote").innerHTML = `Racing (S+Z Series) · ${rows.length} stores. <b>Current tier</b> from MTD qty: under T1 → <i>Under T1</i>; passed T1 but below T2 → <i>Tier 2</i>; … passed T4 but below T5 → <i>Tier 5</i>; passed T5 → <i>Above T5</i>. ` +
-    `<b>Next</b> = tier target to pass next · <b>To go</b> = next − MTD · <b>Need/day</b> = to go ÷ ${D.remDays} days. Group rows (LOB, TSH, total) use summed tier targets and MTD; ` +
-    `the right column shows stores by tier (Under T1 · Tier 2 … Above T5), or the store's own T1 → T5 ladder (blue = passed).`;
+  document.getElementById("reviewNote").innerHTML = `Racing (S+Z Series) · ${rows.length} stores. <b>Tier</b> from the month-end estimate: under T1 → <i>Under T1</i>; passes T1 but below T2 → <i>Tier 2</i>; … passes T5 → <i>Above T5</i>. ` +
+    `<b>To go</b> = next tier − estimate · <b>Need/day</b> = (next tier − MTD) ÷ ${D.remDays} days · <b>Index</b> = estimate ÷ last month × 100. Group rows (LOB, TSH, total) use summed targets and qty; ` +
+    `the right column shows stores by tier (Under T1 · Tier 2 … Above T5), or the store's own T1 → T5 ladder (blue = passed by the estimate).`;
   const cols = [["name", "LOB / TSH / Store", "l", ""], ["n", "Stores", "", ""],
     ["r1", "T1", "bl", "Tier targets"], ["r2", "T2", "", ""], ["r3", "T3", "", ""], ["r4", "T4", "", ""], ["r5", "T5", "", ""],
-    ["mtd", "MTD qty", "bl", "Now"], ["zone", "Current tier", "", ""],
-    ["next", "Next", "bl", "To move up"], ["toNext", "To go", "", ""], ["needNext", "Need/day", "", ""], ["today", "Today", "bl", ""],
+    ["mtd", "MTD", "bl", "S+Z qty"], ["est", "Est.", "", ""], ["zone", "Tier (est.)", "", ""],
+    ["next", "Next", "bl", "To move up"], ["toNext", "To go", "", ""], ["needNext", "Need/day", "", ""],
+    ["lm", "Last month", "bl", "Growth MoM"], ["idx", "Index", "", ""], ["grow", "Growing", "", ""],
     ["", "Stores by tier / ladder", "bl", ""], ["stock", "Units", "bl", "S+Z stock"], ["cover", "Cover", "", ""], ["oos", "Top-5 OOS", "l", ""]];
   const key = cols.some((c) => c[0] === state.sortKey) ? state.sortKey : "name", dir = state.sortDir === "asc" ? 1 : -1;
   t.tHead.innerHTML = `<tr>${cols.map(([k, l, c, grp]) => `<th data-k="${k}" class="${c}${grp ? " gstart" : ""}" ${key === k && k ? `aria-sort="${state.sortDir === "asc" ? "ascending" : "descending"}"` : ""}><span class="grp">${grp || "&nbsp;"}</span>${l}</th>`).join("")}</tr>`;
   const tree = new Map();
   rows.forEach((s) => { const l = tree.get(s.lob) || tree.set(s.lob, new Map()).get(s.lob); (l.get(s.tsh) || l.set(s.tsh, []).get(s.tsh)).push(s); });
   const sortVal = (name, o) => key === "name" ? name : key === "oos" ? (o.oosN ?? 0) : (o[key] ?? -1);
-  const sortEntries = (arr) => arr.sort((a, b) => { const va = sortVal(a[0], a[1]), vb = sortVal(b[0], b[1]); return (typeof va === "string" ? va.localeCompare(vb) : (va - vb) || ((a[1].mtd || 0) - (b[1].mtd || 0))) * dir; });
+  const sortEntries = (arr) => arr.sort((a, b) => { const va = sortVal(a[0], a[1]), vb = sortVal(b[0], b[1]); return (typeof va === "string" ? va.localeCompare(vb) : (va - vb) || ((a[1].est || 0) - (b[1].est || 0))) * dir; });
   const pack = (ss) => { const o = sumMetrics(ss, "r"); return { ...o, ...racingRowVals(o), ss, oosN: ss.filter((s) => oosOf(s, top).length).length }; };
   const groupRow = (lvl, k, label, o) => `<tr class="g${lvl}" data-key="${esc(k)}">
       <td class="l name" style="padding-left:${8 + lvl * 18}px" title="${esc(label)}"><span class="caret">${state.open.has(k) ? "▼" : "▶"}</span><span class="lvl">${["LOB", "TSH"][lvl]}</span>${esc(label)}</td>
-      <td>${fmt(o.withT)}</td>${o.hasTier ? racingCells(o) : `<td class="bl" colspan="11">no Racing target</td>`}<td class="bl">${tdistHtml(o.byTier)}</td>
+      <td>${fmt(o.withT)}</td>${o.hasTier ? racingCells(o) : `<td class="bl" colspan="14">no Racing target</td>`}<td class="bl">${tdistHtml(o.byTier)}</td>
       <td class="bl">${fmt(o.stock)}</td><td>${coverHtml(o.cover)}</td><td class="l ${o.oosN ? "oos" : "muted"}">${o.oosN ? o.oosN + " store" + (o.oosN === 1 ? "" : "s") : "—"}</td></tr>`;
   const storeRow = (s) => {
     const m = metrics(s, "r"), oos = oosOf(s, top);
-    const ladder = m.hasTier ? `<span class="ladder" title="Tier ladder T1 → T5 (blue = already passed by MTD)">${s.tiers.map((v) => m.mtd >= v && v > 0 ? `<b>${fmt(v)}</b>` : fmt(v)).join(" · ")}</span>` : "—";
+    const ladder = m.hasTier ? `<span class="ladder" title="Tier ladder T1 → T5 (blue = passed by the month-end estimate)">${s.tiers.map((v) => m.est >= v && v > 0 ? `<b>${fmt(v)}</b>` : fmt(v)).join(" · ")}</span>` : "—";
     return `<tr class="st ${state.store === s.site ? "sel" : ""}" data-site="${s.site}" title="${esc(s.name)} · ${esc(s.ch)} · click to focus on this store">
       <td class="l name" style="padding-left:44px"><span class="site">${s.site}</span>${esc(shortName(s.name))}</td><td class="muted" title="${esc(s.ch)}">${esc(chShort(s.ch))}</td>
-      ${m.hasTier ? racingCells({ ...m, tiers: s.tiers }) : `<td class="bl muted" colspan="11">no Racing target (all tiers 0)</td>`}
+      ${m.hasTier ? racingCells({ ...m, tiers: s.tiers }, true) : `<td class="bl muted" colspan="14">no Racing target (all tiers 0)</td>`}
       <td class="bl">${ladder}</td><td class="bl">${fmt(m.stock)}</td><td>${coverHtml(m.cover)}</td>
       <td class="l ${oos.length ? "oos" : "muted"}" title="${esc(oos.join(", "))}">${oos.length ? esc(oos.slice(0, 3).join(", ")) + (oos.length > 3 ? ` +${oos.length - 3}` : "") : "—"}</td></tr>`;
   };
@@ -918,7 +938,7 @@ function renderReviewRacing(rows) {
       const kt = lob + "|" + tsh;
       html += groupRow(1, kt, tsh, ot);
       if (!state.open.has(kt)) return;
-      sortEntries(ot.ss.map((s) => { const m = metrics(s, "r"); const o = m.hasTier ? { ...m, ...racingRowVals({ ...m, tiers: s.tiers, withT: 1 }) } : { mtd: -1, zone: -1 }; return [s.name, { ...o, s, oosN: oosOf(s, top).length }]; }))
+      sortEntries(ot.ss.map((s) => { const m = metrics(s, "r"); const o = m.hasTier ? { ...m, ...racingRowVals({ ...m, tiers: s.tiers, withT: 1 }) } : { est: -1, zone: -1 }; return [s.name, { ...o, s, oosN: oosOf(s, top).length }]; }))
         .forEach(([, o]) => html += storeRow(o.s));
     });
   });
@@ -981,16 +1001,18 @@ function renderBreakdown(rows) {
 
 // ---------- Racing breakdown: tiers by Business unit / Channel / LOB / TSH ----------
 function racingRowVals(o) {
-  return { n: o.withT, r1: o.tiers[0], r2: o.tiers[1], r3: o.tiers[2], r4: o.tiers[3], r5: o.tiers[4], mtd: o.mtd, today: o.today,
-           zone: o.zone ?? -1, next: o.next ?? 0, toNext: o.toNext, needNext: o.needNext, stock: o.stock, cover: o.cover };
+  return { n: o.withT, r1: o.tiers[0], r2: o.tiers[1], r3: o.tiers[2], r4: o.tiers[3], r5: o.tiers[4], mtd: o.mtd, est: o.est,
+           zone: o.zone ?? -1, next: o.next ?? 0, toNext: o.toNext, needNext: o.needNext, lm: o.lm, idx: o.idx ?? -1,
+           grow: o.withT > 1 ? o.grow : (o.grow ? 1 : 0), stock: o.stock, cover: o.cover };
 }
-function racingCells(o) {
+function racingCells(o, store = false) {
   const has = o.hasTier;
   return `<td class="bl">${fmt(o.tiers[0])}</td><td>${fmt(o.tiers[1])}</td><td>${fmt(o.tiers[2])}</td><td>${fmt(o.tiers[3])}</td><td>${fmt(o.tiers[4])}</td>
-    <td class="bl"><b>${fmt(o.mtd)}</b></td><td>${tierHtml(o.zone, has)}</td>
+    <td class="bl">${fmt(o.mtd)}</td><td><b>${fmt(o.est)}</b></td><td>${tierHtml(o.zone, has)}</td>
     <td class="bl">${!has ? "—" : o.next == null ? `<span class="s-good">All passed</span>` : `T${o.zone + 1} · ${fmt(o.next)}`}</td>
-    <td>${!has || o.next == null ? "—" : fmt(o.toNext)}</td><td>${!has || o.next == null ? "—" : o.needNext.toFixed(1)}</td>
-    <td class="bl ${o.today ? "" : "muted"}">${D.hasToday ? fmt(o.today) : "—"}</td>`;
+    <td>${!has || o.next == null ? "—" : "+" + fmt(o.toNext)}</td><td>${!has || o.next == null ? "—" : o.needNext.toFixed(1)}</td>
+    <td class="bl">${fmt(o.lm)}</td><td>${idxHtml(o.idx)}</td>
+    <td>${store ? "" : `<b class="s-good">${o.grow}</b><span class="muted">/${o.withT}</span>`}</td>`;
 }
 function renderBreakdownRacing(rows) {
   document.getElementById("brkTitle").textContent = "Breakdown · Racing (S+Z Series) tiers";
@@ -1002,16 +1024,17 @@ function renderBreakdownRacing(rows) {
   const sk = state.bSort in racingRowVals(sumMetrics([], "r")) || state.bSort === "name" ? state.bSort : "zone", dir = state.bDir === "asc" ? 1 : -1;
   const val = (g) => sk === "name" ? g.labels.join(" ") : g.v[sk] ?? -1;
   groups.sort((x, y) => (keys.length > 1 ? x.labels[0].localeCompare(y.labels[0]) : 0)
-    || ((typeof val(x) === "string" ? val(x).localeCompare(val(y)) : (val(x) - val(y)) || (x.o.mtd / x.o.tiers[0] - y.o.mtd / y.o.tiers[0])) * dir));
+    || ((typeof val(x) === "string" ? val(x).localeCompare(val(y)) : (val(x) - val(y)) || (x.o.est / x.o.tiers[0] - y.o.est / y.o.tiers[0])) * dir));
   const tot = sumMetrics(rows, "r");
   document.getElementById("brkNote").innerHTML = `${tot.withT} stores with a Racing target in the current filter. Tier targets are summed per row. ` +
-    `<b>Current tier</b> from MTD qty: under T1 → <i>Under T1</i>; passed T1 but below T2 → <i>Tier 2</i>; … passed T4 but below T5 → <i>Tier 5</i>; passed T5 → <i>Above T5</i>. ` +
-    `<b>Next</b> = the tier target to pass next; <b>To go</b> = next − MTD; <b>Need/day</b> = to go ÷ ${D.remDays} days left. <b>Stores by tier</b>: Under T1 · Tier 2 · Tier 3 · Tier 4 · Tier 5 · Above T5. Click a row to filter, a column to sort.`;
+    `<b>Tier</b> from the month-end estimate: est. under T1 → <i>Under T1</i>; passes T1 but below T2 → <i>Tier 2</i>; … passes T4 but below T5 → <i>Tier 5</i>; passes T5 → <i>Above T5</i>. ` +
+    `<b>To go</b> = next tier − estimate; <b>Need/day</b> = (next tier − MTD) ÷ ${D.remDays} days. <b>Growth index</b> = estimate ÷ last month S+Z × 100 (▲ above 100 = growing); <b>Growing</b> = stores growing / stores. Click a row to filter, a column to sort.`;
   const th = (k, l, c = "", g = "") => `<th data-k="${k}" class="${c}${g ? " gstart" : ""}" ${sk === k ? `aria-sort="${state.bDir === "asc" ? "ascending" : "descending"}"` : ""}><span class="grp">${g || "&nbsp;"}</span>${l}</th>`;
   t.tHead.innerHTML = `<tr>${keys.map(([, l], i) => th(i === keys.length - 1 ? "name" : "", l, "l")).join("")}${th("n", "Stores")}
     ${th("r1", "T1", "bl", "Tier targets")}${th("r2", "T2")}${th("r3", "T3")}${th("r4", "T4")}${th("r5", "T5")}
-    ${th("mtd", "MTD qty", "bl", "Now")}${th("zone", "Current tier")}
-    ${th("next", "Next", "bl", "To move up")}${th("toNext", "To go")}${th("needNext", "Need/day")}${th("today", "Today", "bl")}
+    ${th("mtd", "MTD", "bl", "S+Z qty")}${th("est", "Est.")}${th("zone", "Tier (est.)")}
+    ${th("next", "Next", "bl", "To move up")}${th("toNext", "To go")}${th("needNext", "Need/day")}
+    ${th("lm", "Last month", "bl", "Growth MoM")}${th("idx", "Index")}${th("grow", "Growing")}
     ${th("", "Stores by tier", "bl")}${th("stock", "S+Z stock", "bl")}${th("cover", "Cover")}</tr>`;
   const filt = (g) => state.brk === "bu" || state.brk === "ch" ? { bu: g.labels[0] } : state.brk === "lob" ? { lob: g.labels[0] } : { lob: g.labels[0], tsh: g.labels[1] };
   const row = (o) => `<td>${fmt(o.withT)}</td>${racingCells(o)}<td class="bl">${tdistHtml(o.byTier)}</td><td class="bl">${fmt(o.stock)}</td><td>${coverHtml(o.cover)}</td>`;
