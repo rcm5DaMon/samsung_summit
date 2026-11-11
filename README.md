@@ -60,10 +60,12 @@ You can refresh many times a day.
 - **Save PNG / Copy image** for WhatsApp.
 
 ## Definitions
-- **Store list:** every store in `master_data.target_summit_november`, `master_data.target_aseries_samsung` (151 stores each)
-  and `master_data.target_racing_samsung` (153 stores, of which 142 have a non-zero tier). Each view only uses the stores in its own file.
-  Site codes are trimmed (the Racing file has `" F285"` with a leading space).
-  Business unit (`BU_CATEGORY`), LOB, TSH and channel come from `sales_b2c.master_store_r5`.
+- **Store list:** every store in `master_data.target_summit_november`, `master_data.target_aseries_samsung` and
+  `master_data.target_racing_samsung`, **plus every Region 5 site that sold Samsung Device** this month, last month or today
+  and can sell Samsung: business unit 1MULTIBRAND, 5JB, 6OS or 3NASA, or an exhibition (STATUS or CHANNEL = EXHIBITION).
+  7ERABLUE (no longer sells Samsung) and DCs are never added. New exhibitions or stores are picked up automatically.
+  Stores without a target in a view still add their sales to every total (region, BU, LOB, TSH) and show "no target";
+  on-track and tier counts only count stores with a target. Site codes are trimmed (the Racing file has `" F285"`).
 - **Summit Device:** `brandname = SAMSUNG`, `Product_Category = Device`, **excluding Tablet** (`Detail_Cat <> TABLET`). **A Series:** the same with `Detail_Cat = A SERIES`.
 - **Racing:** the same with `Detail_Cat` in `S SERIES`, `Z SERIES`. Each store has 5 tier targets, reached in order (tier 1 first).
   - **Tier** is set by the **month-end estimate** (`SUM_month_est_quantity`, S+Z). MTD is still shown next to it:
@@ -74,7 +76,7 @@ You can refresh many times a day.
   - **Next** = the tier target to pass next; **To go** = next − estimate (units needed on top of the current pace); **Need/day** = (next − MTD) ÷ days left (incl. today).
   - Region, BU, LOB and TSH rows add up their stores' tier targets and MTD, then apply the same rule (index = summed estimate ÷ summed last month). **Stores by tier**
     counts how many stores are in each bracket (Under T1 · Tier 2 · Tier 3 · Tier 4 · Tier 5 · Above T5).
-  - Stores whose 5 tiers are all 0 (11 stores) have no Racing target and are left out of the Racing view.
+  - Stores whose 5 tiers are all 0, or that are not in the Racing file but sold Samsung, show as "no Racing target"; their S+Z sales still count in the totals.
 - **MTD:** `SUM_quantity` from `region_data.sales_vs_stock` for completed days, 1 Nov to the last loaded day.
 - **Month-end estimate:** `SUM_month_est_quantity` from the same table. It equals MTD ÷ completed days × 30.
 - **On track (MTD):** MTD ≥ target × completed days ÷ 30. Status colours: on track ≥ 100% of pace, slightly behind 80–99%, behind < 80%.

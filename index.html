@@ -308,7 +308,7 @@
 
   <footer>
     <p>Source: BigQuery e-smart-433113 · sales and stock: region_data.sales_vs_stock (completed days to <span class="f-asof"></span>, stock <span class="f-stock"></span>) · today: region_data.sales_daily (PAID POS) · targets: master_data.target_summit_november, master_data.target_aseries_samsung and master_data.target_racing_samsung · store attributes: sales_b2c.master_store_r5.</p>
-    <p>Summit Device = SAMSUNG, Product_Category = Device units excluding Tablet (Detail_Cat = TABLET is left out). A Series = SAMSUNG Device with Detail_Cat = A SERIES. Racing = SAMSUNG Device with Detail_Cat = S SERIES or Z SERIES, 5 tier targets per store reached in order (tier 1 first); stores whose 5 tiers are all 0 have no Racing target and are left out of the Racing view. Racing tier is set by the month-end estimate (SUM_month_est_quantity, S+Z): under T1 = "Under T1"; passes T1 but below T2 = "Tier 2"; passes T2 but below T3 = "Tier 3"; passes T3 but below T4 = "Tier 4"; passes T4 but below T5 = "Tier 5"; passes T5 = "Above T5". Racing growth MoM index = estimate ÷ last month S+Z qty × 100; a store is growing when the index is above 100. Group rows (region, BU, LOB, TSH) use summed tier targets, estimates and last-month qty. MTD = SUM_quantity for completed days. Estimate = SUM_month_est_quantity (completed-day run-rate × 30). On track (MTD) = MTD ≥ target × days gone ÷ 30. On track (estimate) = estimate ≥ target. Today = PAID POS orders in sales_daily, only counted when its date is after the last completed day. Gap = target − (MTD + today). Need / day = gap ÷ days left incl. today. Cover (days) = (stock ÷ month-end estimate qty) × 30.42.</p>
+    <p>Summit Device = SAMSUNG, Product_Category = Device units excluding Tablet (Detail_Cat = TABLET is left out). A Series = SAMSUNG Device with Detail_Cat = A SERIES. Racing = SAMSUNG Device with Detail_Cat = S SERIES or Z SERIES, 5 tier targets per store reached in order (tier 1 first). Stores = every store in the target files plus every Region 5 site that sold Samsung Device this month, last month or today in business units 1MULTIBRAND, 5JB, 6OS, 3NASA or an exhibition (never 7ERABLUE); stores without a target in a view still add their sales to every total and show "no target". Racing tier is set by the month-end estimate (SUM_month_est_quantity, S+Z): under T1 = "Under T1"; passes T1 but below T2 = "Tier 2"; passes T2 but below T3 = "Tier 3"; passes T3 but below T4 = "Tier 4"; passes T4 but below T5 = "Tier 5"; passes T5 = "Above T5". Racing growth MoM index = estimate ÷ last month S+Z qty × 100; a store is growing when the index is above 100. Group rows (region, BU, LOB, TSH) use summed tier targets, estimates and last-month qty. MTD = SUM_quantity for completed days. Estimate = SUM_month_est_quantity (completed-day run-rate × 30). On track (MTD) = MTD ≥ target × days gone ÷ 30. On track (estimate) = estimate ≥ target. Today = PAID POS orders in sales_daily, only counted when its date is after the last completed day. Gap = target − (MTD + today). Need / day = gap ÷ days left incl. today. Cover (days) = (stock ÷ month-end estimate qty) × 30.42.</p>
   </footer>
 </div>
 
@@ -359,10 +359,12 @@ function prep(j) {
   const split = (a) => (a || []).map((r) => r.split("|"));
   const z = () => ({ all: 0, a: 0, r: 0 });
   const map = new Map();
-  split(j.targets).forEach(([site, name, bu, lob, tsh, ch, td, ta, r1, r2, r3, r4, r5, inS, inA, inR]) => {
+  split(j.targets).forEach(([site, name, bu, lob, tsh, ch, td, ta, r1, r2, r3, r4, r5, inS, inA, inR, seller]) => {
     const tiers = [r1, r2, r3, r4, r5].map((v) => +(v || 0));
     map.set(site, { site, name: name || site, bu: bu || "(no BU)", lob: lob || "(no LOB)", tsh: tsh || "(no TSH)", ch,
-      t: { all: +td, a: +ta, r: tiers[0] }, tiers, inProg: { all: inS !== "0", a: inA !== "0", r: inR === "1" && tiers.some((v) => v > 0) },   // Racing: stores with all-zero tiers have no target
+      t: { all: +td, a: +ta, r: tiers[0] }, tiers, seller: seller === "1",
+      // a store is in a view when it is in that target file OR it sold Samsung Device (this month, last month or today) — no-target sellers still count in totals
+      inProg: { all: inS === "1" || seller === "1", a: inA === "1" || seller === "1", r: inR === "1" || seller === "1" },
       mtd: z(), est: z(), today: z(), stock: z(), orders: 0, days: [], models: [] });
   });
   STORES = [...map.values()];
@@ -426,9 +428,9 @@ const PICKS = {
   estOn: ["on track (estimate)", (m) => m.onEst], estOff: ["not on track (estimate)", (m) => !m.onEst],
   inact: () => [`with no ${PROG[state.prog]} sale today`, (m) => m.inactive], noTrx: ["with no transaction at all today", (m) => m.noTrx],
   short: ["with stock below remaining gap", (m) => m.short],
-  growUp: ["growing MoM (Racing estimate above last month)", (m) => m.hasTier && m.grow],
-  growDown: ["not growing MoM (Racing estimate at or below last month)", (m) => m.hasTier && m.idx != null && !m.grow],
-  noLm: ["with no S+Z sales last month (Racing)", (m) => m.hasTier && m.idx == null],
+  growUp: ["growing MoM (Racing estimate above last month)", (m) => m.grow],
+  growDown: ["not growing MoM (Racing estimate at or below last month)", (m) => m.idx != null && !m.grow],
+  noLm: ["with no S+Z sales last month (Racing)", (m) => "idx" in m && m.idx == null],
   ...Object.fromEntries([0, 1, 2, 3, 4, 5].map((t) => ["tier" + t, [`in ${TIER_LBL[t]} by month-end estimate (Racing)`, (m) => m.hasTier && m.zone === t]])),
 };
 const pickDef = (k) => typeof PICKS[k] === "function" ? PICKS[k]() : PICKS[k];
@@ -598,8 +600,9 @@ function sumMetrics(rows, k = state.prog) {
   if (k === "r") {
     const tiers = [0, 0, 0, 0, 0]; o.byTier = [0, 0, 0, 0, 0, 0];
     let lm = 0; o.grow = 0; o.notGrow = 0; o.noLm = 0;
-    rows.forEach((s) => { const m = metrics(s, "r"); if (!m.hasTier) return; s.tiers.forEach((v, i) => tiers[i] += v); o.byTier[m.zone]++;
-      lm += s.lm; if (m.idx == null) o.noLm++; else if (m.grow) o.grow++; else o.notGrow++; });
+    rows.forEach((s) => { const m = metrics(s, "r");
+      lm += s.lm; if (m.idx == null) o.noLm++; else if (m.grow) o.grow++; else o.notGrow++;      // growth: every store in view
+      if (m.hasTier) { s.tiers.forEach((v, i) => tiers[i] += v); o.byTier[m.zone]++; } });      // tiers: stores with a Racing target
     Object.assign(o, tierFields(tiers, o.est, o.mtd), { lm, idx: lm > 0 ? o.est / lm : null });
   }
   return o;
@@ -670,7 +673,7 @@ function racingCard() {
     <div class="label">Racing · S+Z Series · tier by month-end estimate</div>
     <div class="value">${TIER_LBL[o.zone]} <small>est. ${fmt(o.est)} · MTD ${fmt(o.mtd)} · T1 ${fmt(o.tiers[0])} → T5 ${fmt(o.tiers[4])}</small></div>
     <div class="lad" title="Bar = MTD qty · circle = month-end estimate · ticks = tier targets T1..T5"><i style="width:${pos(o.mtd)}%"></i>${ticks}<u style="left:${pos(o.est)}%"></u></div>
-    <div class="foot">Growth MoM index <b>${o.idx == null ? "—" : Math.round(o.idx * 100)}</b> (est. ${fmt(o.est)} ÷ last month ${fmt(o.lm)}) · <span class="s-good">${o.grow}</span> of ${o.withT} stores growing</div>
+    <div class="foot">Growth MoM index <b>${o.idx == null ? "—" : Math.round(o.idx * 100)}</b> (est. ${fmt(o.est)} ÷ last month ${fmt(o.lm)}) · <span class="s-good">${o.grow}</span> of ${o.n} stores growing</div>
     <div class="est">${o.next != null ? `To reach <b>T${o.zone + 1}</b> (${fmt(o.next)}): <b>+${fmt(o.toNext)}</b> on top of the estimate · ${o.needNext.toFixed(1)}/day from MTD` : `<b>All 5 tiers passed</b> on estimate`}</div></div>`;
 }
 
@@ -919,7 +922,7 @@ function renderReviewRacing(rows) {
   const pack = (ss) => { const o = sumMetrics(ss, "r"); return { ...o, ...racingRowVals(o), ss, oosN: ss.filter((s) => oosOf(s, top).length).length }; };
   const groupRow = (lvl, k, label, o) => `<tr class="g${lvl}" data-key="${esc(k)}">
       <td class="l name" style="padding-left:${8 + lvl * 18}px" title="${esc(label)}"><span class="caret">${state.open.has(k) ? "▼" : "▶"}</span><span class="lvl">${["LOB", "TSH"][lvl]}</span>${esc(label)}</td>
-      <td>${fmt(o.withT)}</td>${o.hasTier ? racingCells(o) : `<td class="bl" colspan="14">no Racing target</td>`}<td class="bl">${tdistHtml(o.byTier)}</td>
+      <td>${fmt(o.n)}</td>${o.hasTier ? racingCells(o) : `<td class="bl" colspan="14">no Racing target</td>`}<td class="bl">${tdistHtml(o.byTier)}</td>
       <td class="bl">${fmt(o.stock)}</td><td>${coverHtml(o.cover)}</td><td class="l ${o.oosN ? "oos" : "muted"}">${o.oosN ? o.oosN + " store" + (o.oosN === 1 ? "" : "s") : "—"}</td></tr>`;
   const storeRow = (s) => {
     const m = metrics(s, "r"), oos = oosOf(s, top);
@@ -944,7 +947,7 @@ function renderReviewRacing(rows) {
   });
   t.tBodies[0].innerHTML = html || `<tr><td class="l" colspan="${cols.length}">No Racing stores match the filter.</td></tr>`;
   const o = pack(rows);
-  t.tFoot.innerHTML = o.hasTier ? `<tr><td class="l">Region / total</td><td>${fmt(o.withT)}</td>${racingCells(o)}<td class="bl">${tdistHtml(o.byTier)}</td><td class="bl">${fmt(o.stock)}</td><td>${coverHtml(o.cover)}</td><td class="l">${o.oosN} stores</td></tr>` : "";
+  t.tFoot.innerHTML = o.hasTier ? `<tr><td class="l">Region / total</td><td>${fmt(o.n)}</td>${racingCells(o)}<td class="bl">${tdistHtml(o.byTier)}</td><td class="bl">${fmt(o.stock)}</td><td>${coverHtml(o.cover)}</td><td class="l">${o.oosN} stores</td></tr>` : "";
 }
 
 // ---------- breakdown table (like iP18 vs iP17): both targets side by side ----------
@@ -1001,9 +1004,9 @@ function renderBreakdown(rows) {
 
 // ---------- Racing breakdown: tiers by Business unit / Channel / LOB / TSH ----------
 function racingRowVals(o) {
-  return { n: o.withT, r1: o.tiers[0], r2: o.tiers[1], r3: o.tiers[2], r4: o.tiers[3], r5: o.tiers[4], mtd: o.mtd, est: o.est,
+  return { n: o.n, r1: o.tiers[0], r2: o.tiers[1], r3: o.tiers[2], r4: o.tiers[3], r5: o.tiers[4], mtd: o.mtd, est: o.est,
            zone: o.zone ?? -1, next: o.next ?? 0, toNext: o.toNext, needNext: o.needNext, lm: o.lm, idx: o.idx ?? -1,
-           grow: o.withT > 1 ? o.grow : (o.grow ? 1 : 0), stock: o.stock, cover: o.cover };
+           grow: o.n > 1 ? o.grow : (o.grow ? 1 : 0), stock: o.stock, cover: o.cover };
 }
 function racingCells(o, store = false) {
   const has = o.hasTier;
@@ -1012,7 +1015,7 @@ function racingCells(o, store = false) {
     <td class="bl">${!has ? "—" : o.next == null ? `<span class="s-good">All passed</span>` : `T${o.zone + 1} · ${fmt(o.next)}`}</td>
     <td>${!has || o.next == null ? "—" : "+" + fmt(o.toNext)}</td><td>${!has || o.next == null ? "—" : o.needNext.toFixed(1)}</td>
     <td class="bl">${fmt(o.lm)}</td><td>${idxHtml(o.idx)}</td>
-    <td>${store ? "" : `<b class="s-good">${o.grow}</b><span class="muted">/${o.withT}</span>`}</td>`;
+    <td>${store ? "" : `<b class="s-good">${o.grow}</b><span class="muted">/${o.n}</span>`}</td>`;
 }
 function renderBreakdownRacing(rows) {
   document.getElementById("brkTitle").textContent = "Breakdown · Racing (S+Z Series) tiers";
@@ -1020,7 +1023,7 @@ function renderBreakdownRacing(rows) {
   const by = new Map();
   rows.forEach((s) => { const k = keys.map(([kk]) => s[kk]).join("\u0001"); (by.get(k) || by.set(k, []).get(k)).push(s); });
   const groups = [...by].map(([, ss]) => { const o = sumMetrics(ss, "r"); return { o, v: racingRowVals(o), labels: keys.map(([kk]) => ss[0][kk]) }; })
-    .filter((g) => g.o.hasTier);
+    ;
   const sk = state.bSort in racingRowVals(sumMetrics([], "r")) || state.bSort === "name" ? state.bSort : "zone", dir = state.bDir === "asc" ? 1 : -1;
   const val = (g) => sk === "name" ? g.labels.join(" ") : g.v[sk] ?? -1;
   groups.sort((x, y) => (keys.length > 1 ? x.labels[0].localeCompare(y.labels[0]) : 0)
@@ -1037,15 +1040,15 @@ function renderBreakdownRacing(rows) {
     ${th("lm", "Last month", "bl", "Growth MoM")}${th("idx", "Index")}${th("grow", "Growing")}
     ${th("", "Stores by tier", "bl")}${th("stock", "S+Z stock", "bl")}${th("cover", "Cover")}</tr>`;
   const filt = (g) => state.brk === "bu" || state.brk === "ch" ? { bu: g.labels[0] } : state.brk === "lob" ? { lob: g.labels[0] } : { lob: g.labels[0], tsh: g.labels[1] };
-  const row = (o) => `<td>${fmt(o.withT)}</td>${racingCells(o)}<td class="bl">${tdistHtml(o.byTier)}</td><td class="bl">${fmt(o.stock)}</td><td>${coverHtml(o.cover)}</td>`;
+  const row = (o) => `<td>${fmt(o.n)}</td>${racingCells(o)}<td class="bl">${tdistHtml(o.byTier)}</td><td class="bl">${fmt(o.stock)}</td><td>${coverHtml(o.cover)}</td>`;
   let prev = "";
   t.tBodies[0].innerHTML = groups.map((g) => {
     const f = filt(g), sel = Object.keys(f).every((k) => state[k] === f[k]);
     const lbl = g.labels.map((l, i) => `<td class="l ${i < keys.length - 1 ? "muted" : ""}"><b style="font-weight:${i === keys.length - 1 ? 650 : 400}">${i === 0 && keys.length > 1 && l === prev ? "" : esc(l)}</b></td>`).join("");
     prev = g.labels[0];
     return `<tr class="st ${sel ? "sel" : ""}" data-f='${esc(JSON.stringify(f))}'>${lbl}${row(g.o)}</tr>`;
-  }).join("") || `<tr><td class="l" colspan="20">No Racing stores match the filter.</td></tr>`;
-  t.tFoot.innerHTML = tot.hasTier ? `<tr><td class="l">REGION / TOTAL</td>${keys.length > 1 ? "<td></td>" : ""}${row(tot)}</tr>` : "";
+  }).join("") || `<tr><td class="l" colspan="20">No stores match the filter.</td></tr>`;
+  t.tFoot.innerHTML = rows.length ? `<tr><td class="l">REGION / TOTAL</td>${keys.length > 1 ? "<td></td>" : ""}${row(tot)}</tr>` : "";
 }
 
 // ---------- stock analysis: Detail_Cat -> Model_Type_Detail + Model_Category ----------
