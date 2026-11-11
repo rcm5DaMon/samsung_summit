@@ -32,6 +32,8 @@ ms AS (
 svs AS (
   SELECT line, order_date AS d, TRIM(site_code) AS site,
          IFNULL(NULLIF(Model_Type, ''), 'OTHER') AS model,
+         -- variant = Model_Type_Detail + ' ' + Model_Category, e.g. 'A57 5G 8/256 GB'
+         TRIM(CONCAT(IFNULL(Model_Type_Detail, ''), ' ', IFNULL(Model_Category, ''))) AS variant,
          CASE Detail_Cat WHEN 'A SERIES' THEN 'A' WHEN 'S SERIES' THEN 'S' WHEN 'Z SERIES' THEN 'Z'
                          WHEN 'TABLET' THEN 'T' ELSE 'X' END AS cat,
          SUM_quantity AS q, SUM_month_est_quantity AS est
@@ -46,7 +48,7 @@ asof AS (
 stk_date AS (SELECT MAX(d) AS stock_date FROM svs WHERE line = 'stock'),
 
 sales AS (
-  SELECT d, site, cat, model, SUM(q) AS q, SUM(est) AS est
+  SELECT d, site, cat, model, variant, SUM(q) AS q, SUM(est) AS est
   FROM svs WHERE line = 'sales' AND site IN (SELECT site FROM tgt)
   GROUP BY ALL
 ),
@@ -62,7 +64,7 @@ est AS (
 ),
 stk AS (
   SELECT * FROM (
-    SELECT line, site, cat, model, SUM(q) AS q
+    SELECT line, site, cat, model, variant, SUM(q) AS q
     FROM svs, stk_date
     WHERE line IN ('stock', 'stock_dc') AND d = stk_date.stock_date
       AND (line = 'stock_dc' OR site IN (SELECT site FROM tgt))
@@ -77,7 +79,7 @@ dcs AS (
 -- today intraday POS (PAID). Only used when its date is after the last completed day in sales_vs_stock.
 sd AS (
   SELECT PARSE_DATE('%Y/%m/%d', `Date`) AS d, TRIM(`Site Code`) AS site, brandname, product_category,
-         detail_cat, model_type, Quantity AS q, `Time` AS tm, `Order Number` AS ord
+         detail_cat, model_type, model_type_detail, model_category, Quantity AS q, `Time` AS tm, `Order Number` AS ord
   FROM `e-smart-433113.region_data.sales_daily`
   WHERE `Order Status` = 'PAID'
 ),
@@ -91,7 +93,8 @@ today AS (
   SELECT sd.site,
          CASE sd.detail_cat WHEN 'A SERIES' THEN 'A' WHEN 'S SERIES' THEN 'S' WHEN 'Z SERIES' THEN 'Z'
                             WHEN 'TABLET' THEN 'T' ELSE 'X' END AS cat,
-         IFNULL(NULLIF(sd.model_type, ''), 'OTHER') AS model, SUM(sd.q) AS units
+         IFNULL(NULLIF(sd.model_type, ''), 'OTHER') AS model,
+         TRIM(CONCAT(IFNULL(sd.model_type_detail, ''), ' ', IFNULL(sd.model_category, ''))) AS variant, SUM(sd.q) AS units
   FROM sd, today_meta tm
   WHERE sd.d = tm.today_date AND sd.brandname = 'SAMSUNG' AND sd.product_category = 'Device'
     AND sd.site IN (SELECT site FROM tgt)
@@ -105,13 +108,13 @@ today_any AS (
   WHERE sd.d = tm.today_date AND sd.site IN (SELECT site FROM tgt)
   GROUP BY sd.site
 ),
--- store x model: MTD (completed days), today, store stock, month estimate
+-- store x model x variant: MTD (completed days), today, store stock, month estimate
 mix AS (
-  SELECT site, cat, model, SUM(mtd) AS mtd, SUM(tod) AS tod, SUM(stock) AS stock, SUM(est) AS est FROM (
-    SELECT site, cat, model, q AS mtd, 0 AS tod, 0 AS stock, est FROM sales
-    UNION ALL SELECT site, cat, model, 0, CAST(units AS INT64), 0, 0 FROM today
-    UNION ALL SELECT site, cat, model, 0, 0, q, 0 FROM stk WHERE line = 'stock')
-  GROUP BY site, cat, model
+  SELECT site, cat, model, variant, SUM(mtd) AS mtd, SUM(tod) AS tod, SUM(stock) AS stock, SUM(est) AS est FROM (
+    SELECT site, cat, model, variant, q AS mtd, 0 AS tod, 0 AS stock, est FROM sales
+    UNION ALL SELECT site, cat, model, variant, 0, CAST(units AS INT64), 0, 0 FROM today
+    UNION ALL SELECT site, cat, model, variant, 0, 0, q, 0 FROM stk WHERE line = 'stock')
+  GROUP BY site, cat, model, variant
 )
 
 SELECT TO_JSON_STRING(STRUCT(
@@ -131,13 +134,13 @@ SELECT TO_JSON_STRING(STRUCT(
         FROM daily WHERE q_all <> 0 OR q_a <> 0 ORDER BY d, site) AS daily,
   -- site|month est all Device|month est A Series   (SUM_month_est_quantity)
   ARRAY(SELECT CONCAT(site, '|', CAST(ROUND(e_all, 1) AS STRING), '|', CAST(ROUND(e_a, 1) AS STRING)) FROM est ORDER BY site) AS est,
-  -- site|cat|model|MTD units|today units|store stock|month est units   (cat: A=A Series, S, Z, T=Tablet, X=other)
-  ARRAY(SELECT CONCAT(site, '|', cat, '|', model, '|', CAST(mtd AS STRING), '|', CAST(tod AS STRING), '|', CAST(stock AS STRING), '|', CAST(ROUND(est, 1) AS STRING))
-        FROM mix WHERE mtd <> 0 OR tod <> 0 OR stock <> 0 ORDER BY site, cat, model) AS mix,
+  -- site|cat|model|variant|MTD units|today units|store stock|month est units   (cat: A=A Series, S, Z, T=Tablet, X=other)
+  ARRAY(SELECT CONCAT(site, '|', cat, '|', model, '|', variant, '|', CAST(mtd AS STRING), '|', CAST(tod AS STRING), '|', CAST(stock AS STRING), '|', CAST(ROUND(est, 1) AS STRING))
+        FROM mix WHERE mtd <> 0 OR tod <> 0 OR stock <> 0 ORDER BY site, cat, model, variant) AS mix,
   -- site|PAID orders today (any brand, any product)
   ARRAY(SELECT CONCAT(site, '|', CAST(orders AS STRING)) FROM today_any ORDER BY site) AS today_any,
-  -- DC site|cat|model|stock units
-  ARRAY(SELECT CONCAT(site, '|', cat, '|', model, '|', CAST(q AS STRING)) FROM stk WHERE line = 'stock_dc' ORDER BY site, cat, model) AS dc_stock,
+  -- DC site|cat|model|variant|stock units
+  ARRAY(SELECT CONCAT(site, '|', cat, '|', model, '|', variant, '|', CAST(q AS STRING)) FROM stk WHERE line = 'stock_dc' ORDER BY site, cat, model, variant) AS dc_stock,
   -- DC site|DC name|business unit
   ARRAY(SELECT CONCAT(site, '|', name, '|', bu) FROM dcs ORDER BY bu, site) AS dcs
 )) AS j
