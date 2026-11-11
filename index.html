@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Samsung Summit · November</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-0: #f2f4f8;
+    --surface-1: #ffffff;
+    --border: #dde2ec;
+    --grid: #e9edf4;
+    --text-primary: #000000;
+    --text-secondary: #4b5162;
+    --text-muted: #8a90a0;
+    --series-1: #1428a0;      /* Samsung blue */
+    --series-1-soft: #dce3fa;
+    --accent: #2189ff;        /* lighter Samsung blue */
+    --hero: #000000;
+    --hero-2: #1428a0;
+    --target: #8a90a0;
+    --good: #0ca30c;
+    --warning: #fab219;
+    --critical: #d03b3b;
+    --good-text: #006300;
+    --warning-text: #8a5a00;
+    --critical-text: #b02a2a;
+    --lvl0: #e3e8f7;
+    --lvl1: #eef1fa;
+    --lvl2: #f6f8fd;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --surface-0: #07090f;
+      --surface-1: #11141d;
+      --border: #252a38;
+      --grid: #1c2030;
+      --text-primary: #f2f4f8;
+      --text-secondary: #b9bfcd;
+      --text-muted: #7d8496;
+      --series-1: #4d7bff;
+      --series-1-soft: #17245a;
+      --accent: #6ea8ff;
+      --hero: #000000;
+      --hero-2: #1428a0;
+      --target: #7d8496;
+      --good-text: #4cc94c;
+      --warning-text: #fab219;
+      --critical-text: #f07a7a;
+      --lvl0: #172045;
+      --lvl1: #131a33;
+      --lvl2: #11162a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--surface-0); color: var(--text-primary);
+         font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 1600px; margin: 0 auto; padding: 20px 20px 48px; }
+  header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 16px;
+           background: linear-gradient(110deg, var(--hero) 0%, var(--hero) 45%, var(--hero-2) 100%); color: #fff;
+           border-radius: 16px; padding: 22px 24px 20px; }
+  .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: #8fb4ff; margin-bottom: 4px; }
+  h1 { font-size: 30px; margin: 0; letter-spacing: .02em; font-weight: 800; text-transform: uppercase; }
+  h1 span { font-weight: 300; }
+  .sub { color: rgba(255,255,255,.75); margin-top: 4px; }
+  header .chip { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.22); color: rgba(255,255,255,.88); }
+  header .btn-ghost { background: transparent; border-color: rgba(255,255,255,.35); color: #fff; }
+  header .btn-ghost:hover { border-color: #fff; }
+  header .btn { background: #fff; color: #1428a0; font-weight: 700; border-radius: 999px; padding: 6px 16px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .chip { font-size: 12px; color: var(--text-secondary); background: var(--surface-1); border: 1px solid var(--border);
+          border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+  .btn { font: inherit; font-size: 13px; color: #fff; background: var(--series-1); border: 0; border-radius: 8px;
+         padding: 6px 12px; cursor: pointer; text-decoration: none; white-space: nowrap; }
+  .btn-ghost { font: inherit; font-size: 13px; color: var(--text-primary); background: var(--surface-1); border: 1px solid var(--border);
+               border-radius: 8px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+  .btn-ghost:hover { border-color: var(--text-muted); }
+  .btn-ghost[disabled] { opacity: .6; cursor: progress; }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--text-primary); color: var(--surface-1);
+           padding: 8px 14px; border-radius: 8px; font-size: 13px; z-index: 50; display: none; }
+
+  .filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; background: var(--surface-1);
+             border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; margin-bottom: 16px; }
+  .filters label { font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
+  select, input[type=search] { font: inherit; font-size: 13px; color: var(--text-primary); background: var(--surface-0);
+         border: 1px solid var(--border); border-radius: 8px; padding: 5px 8px; }
+  input[type=search] { min-width: 180px; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+  .seg button { font: inherit; font-size: 13px; background: var(--surface-0); color: var(--text-secondary); border: 0;
+                padding: 5px 12px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--series-1); color: #fff; font-weight: 600; }
+  .spacer { flex: 1; }
+  .clear { font: inherit; font-size: 12px; color: var(--text-secondary); background: none; border: 1px solid var(--border);
+           border-radius: 8px; padding: 4px 8px; cursor: pointer; }
+  .banner { display: none; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); margin: -6px 0 12px;
+            background: var(--series-1-soft); border-radius: 8px; padding: 6px 10px; }
+
+  .kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .kpi { border-top: 3px solid var(--series-1); }
+  .kpi .label { font-size: 11px; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+  .kpi .value { font-size: 28px; font-weight: 650; letter-spacing: -0.02em; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .kpi .value small { font-size: 14px; font-weight: 500; color: var(--text-secondary); }
+  .kpi .foot { font-size: 12px; color: var(--text-secondary); margin-top: 6px; }
+  .kpi.sel { outline: 2px solid var(--series-1); outline-offset: -1px; }
+  .est { margin-top: 6px; font-size: 12px; color: var(--text-secondary); }
+  .est b { font-size: 15px; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+  .bar { position: relative; height: 8px; background: var(--grid); border-radius: 4px; margin-top: 10px; }
+  .bar > i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--series-1); border-radius: 4px; }
+  .bar > b { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--text-primary); }
+  .bar > u { position: absolute; top: -3px; width: 10px; height: 10px; margin-left: -5px; border: 2px solid var(--series-1);
+             background: var(--surface-1); border-radius: 50%; }
+  .pick { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: baseline; margin-top: 4px; }
+  .pick button { font: inherit; text-align: left; background: none; border: 0; padding: 0; cursor: pointer; color: var(--text-primary); }
+  .pick button b { font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .pick button[aria-pressed="true"] b { color: var(--series-1); text-decoration: underline; }
+  .pick button[disabled] { cursor: default; color: var(--text-muted); }
+  .pick span { font-size: 12px; color: var(--text-secondary); }
+  .pick .sep { grid-column: 1 / -1; border-top: 1px solid var(--grid); margin: 4px 0 2px; }
+
+  .status { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; }
+  .status .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
+  .s-good { color: var(--good-text); } .s-good .dot { background: var(--good); }
+  .s-warn { color: var(--warning-text); } .s-warn .dot { background: var(--warning); }
+  .s-crit { color: var(--critical-text); } .s-crit .dot { background: var(--critical); }
+  .s-none { color: var(--text-muted); } .s-none .dot { background: var(--text-muted); }
+
+  .grid2 { display: grid; grid-template-columns: 3fr 2fr; gap: 12px; margin-bottom: 16px; }
+  h2 { font-size: 15px; margin: 0 0 2px; font-weight: 800; letter-spacing: .01em; }
+  .note { font-size: 12px; color: var(--text-secondary); margin: 0 0 10px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 14px; height: 0; border-top: 2px solid; display: inline-block; }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  svg text { fill: var(--text-secondary); font-size: 11px; }
+  .chart-box { position: relative; }
+  .tip { position: absolute; pointer-events: none; background: var(--surface-1); border: 1px solid var(--border);
+         border-radius: 8px; padding: 6px 9px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.12);
+         white-space: nowrap; display: none; z-index: 5; }
+
+  .table-card { padding: 0; overflow: hidden; margin-bottom: 16px; }
+  .table-head { padding: 14px 16px 8px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: flex-end; }
+  .tscroll { overflow: auto; max-height: 720px; }
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; font-size: 13px; }
+  th, td { padding: 6px 7px; border-bottom: 1px solid var(--grid); text-align: right; white-space: nowrap; }
+  th { position: sticky; top: 0; background: var(--surface-1); box-shadow: inset 0 -2px 0 var(--series-1); font-size: 12px; font-weight: 600; color: var(--text-secondary);
+       cursor: pointer; user-select: none; z-index: 2; border-bottom: 1px solid var(--border); vertical-align: bottom; }
+  th.l, td.l { text-align: left; }
+  th[aria-sort="ascending"]::after { content: " ▲"; font-size: 9px; }
+  th[aria-sort="descending"]::after { content: " ▼"; font-size: 9px; }
+  th.gstart { z-index: 3; }
+  th .grp { display: block; width: 0; overflow: visible; font-weight: 500; color: var(--text-muted); font-size: 10px; text-transform: uppercase; letter-spacing: .04em; }
+  th.bl, td.bl { border-left: 1px solid var(--border); }
+  td.muted, span.muted { color: var(--text-muted); }
+  tfoot td { font-weight: 650; background: var(--surface-1); position: sticky; bottom: 0; border-top: 1px solid var(--border); }
+  tr.g0 td { background: var(--lvl0); font-weight: 750; color: var(--series-1); }
+  @media (prefers-color-scheme: dark) { tr.g0 td { color: var(--accent); } }
+  tr.g1 td { background: var(--lvl1); font-weight: 600; }
+  tr.g2 td { background: var(--lvl2); font-weight: 600; }
+  tr.g0, tr.g1, tr.g2 { cursor: pointer; }
+  tr.st { cursor: pointer; }
+  tr.st:hover td { background: var(--surface-0); }
+  tr.st.sel td { background: var(--series-1-soft); }
+  td.name { max-width: 250px; overflow: hidden; text-overflow: ellipsis; }
+  .caret { display: inline-block; width: 14px; color: var(--text-muted); font-size: 10px; }
+  .site { color: var(--text-muted); font-size: 12px; margin-right: 6px; font-weight: 400; }
+  .lvl { font-size: 10px; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: .04em; margin-right: 6px; }
+  .mini { display: inline-block; vertical-align: middle; width: 48px; height: 6px; background: var(--grid); border-radius: 3px; position: relative; margin-right: 8px; }
+  .mini > i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--series-1); border-radius: 3px; }
+  .mini > b { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--text-primary); }
+  .oos { color: var(--critical-text); font-size: 12px; }
+  .lvlbtns { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; color: var(--text-secondary); }
+
+  footer { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+  footer p { margin: 4px 0; }
+  @media (max-width: 1000px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .grid2 { grid-template-columns: 1fr; } }
+  @media (min-width: 1001px) and (max-width: 1300px) { .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+</style>
+</head>
+<body>
+<div class="toast" id="toast" data-noshot></div>
+<div class="wrap" id="shotArea">
+  <header>
+    <div>
+      <div class="eyebrow">Erajaya Region 5 · Target monitoring</div>
+      <h1>Samsung Summit <span>November</span></h1>
+      <div class="sub" id="sub">Loading…</div>
+    </div>
+    <div class="meta" id="meta"></div>
+  </header>
+
+  <div class="filters" role="group" aria-label="Filters">
+    <span class="seg" role="group" aria-label="Target">
+      <button type="button" data-prog="all" aria-pressed="true" title="Target Summit: all Samsung Device units">Summit Device</button>
+      <button type="button" data-prog="a" aria-pressed="false" title="Target A Series: Samsung Device, Detail_Cat = A SERIES">A Series</button>
+    </span>
+    <label>Business unit <select id="fBu"></select></label>
+    <label>LOB <select id="fLob"></select></label>
+    <label>TSH <select id="fTsh"></select></label>
+    <button type="button" id="fClear" class="clear" hidden>✕ Clear filters</button>
+    <span class="spacer"></span>
+    <input type="search" id="fSearch" placeholder="Search store or site code…" aria-label="Search store">
+  </div>
+
+  <section class="kpis" id="kpis"></section>
+  <div class="banner" id="banner" data-noshot></div>
+
+  <section class="grid2">
+    <div class="card">
+      <h2>Cumulative sales vs target pace</h2>
+      <p class="note" id="paceNote"></p>
+      <div class="legend">
+        <span><i class="sw" style="border-color:var(--series-1)"></i>Actual (cumulative)</span>
+        <span><i class="sw" style="border-color:var(--target);border-top-style:dashed"></i>Target pace</span>
+        <span><i class="sw" style="border-color:var(--series-1);border-top-style:dotted"></i>Month-end estimate</span>
+      </div>
+      <div class="chart-box" id="paceBox"><svg id="paceChart" viewBox="0 0 640 330" role="img" aria-label="Cumulative sales vs target pace"></svg><div class="tip"></div></div>
+    </div>
+    <div class="card">
+      <h2>Achievement by TSH</h2>
+      <p class="note">Bar = MTD achievement · black tick = time gone · ○ = month-end estimate · click a TSH to filter</p>
+      <div class="chart-box" id="tshBox"><svg id="tshChart" viewBox="0 0 440 260" role="img" aria-label="Achievement by TSH"></svg><div class="tip"></div></div>
+    </div>
+  </section>
+
+  <section class="card table-card">
+    <div class="table-head">
+      <div>
+        <h2>Breakdown · Summit Device and A Series</h2>
+        <p class="note" style="margin:0" id="brkNote"></p>
+      </div>
+      <div class="lvlbtns" data-noshot>Break down by
+        <span class="seg" role="group" aria-label="Break down by">
+          <button type="button" data-brk="bu" aria-pressed="true">Business unit</button>
+          <button type="button" data-brk="ch" aria-pressed="false">Channel</button>
+          <button type="button" data-brk="lob" aria-pressed="false">LOB</button>
+          <button type="button" data-brk="tsh" aria-pressed="false">TSH</button>
+        </span>
+      </div>
+    </div>
+    <div class="tscroll" style="max-height:none">
+      <table id="brkTable"><thead></thead><tbody></tbody><tfoot></tfoot></table>
+    </div>
+  </section>
+
+  <section class="card table-card">
+    <div class="table-head">
+      <div>
+        <h2>Review · LOB → TSH → Store</h2>
+        <p class="note" style="margin:0" id="reviewNote"></p>
+      </div>
+      <div class="lvlbtns" data-noshot>Show down to
+        <span class="seg" role="group" aria-label="Level">
+          <button type="button" data-lvl="0" aria-pressed="false">LOB</button>
+          <button type="button" data-lvl="1" aria-pressed="true">TSH</button>
+          <button type="button" data-lvl="2" aria-pressed="false">Store</button>
+        </span>
+      </div>
+    </div>
+    <div class="tscroll">
+      <table id="revTable"><thead></thead><tbody></tbody><tfoot></tfoot></table>
+    </div>
+  </section>
+
+  <section class="card table-card">
+    <div class="table-head">
+      <div>
+        <h2>Stock analysis · by model</h2>
+        <p class="note" style="margin:0" id="stockNote"></p>
+      </div>
+    </div>
+    <div class="tscroll" style="max-height:none">
+      <table id="modelTable"><thead></thead><tbody></tbody><tfoot></tfoot></table>
+    </div>
+  </section>
+
+  <section class="card table-card">
+    <div class="table-head">
+      <div>
+        <h2>DC stock · Samsung Device</h2>
+        <p class="note" style="margin:0" id="dcNote"></p>
+      </div>
+    </div>
+    <div class="tscroll" style="max-height:none">
+      <table id="dcTable"><thead></thead><tbody></tbody><tfoot></tfoot></table>
+    </div>
+  </section>
+
+  <footer>
+    <p>Source: BigQuery e-smart-433113 · sales and stock: region_data.sales_vs_stock (completed days to <span class="f-asof"></span>, stock <span class="f-stock"></span>) · today: region_data.sales_daily (PAID POS) · targets: master_data.target_summit_november and master_data.target_aseries_samsung · store attributes: sales_b2c.master_store_r5.</p>
+    <p>Summit Device = all SAMSUNG, Product_Category = Device units. A Series = SAMSUNG Device with Detail_Cat = A SERIES. MTD = SUM_quantity for completed days. Estimate = SUM_month_est_quantity (completed-day run-rate × 30). On track (MTD) = MTD ≥ target × days gone ÷ 30. On track (estimate) = estimate ≥ target. Today = PAID POS orders in sales_daily, only counted when its date is after the last completed day. Gap = target − (MTD + today). Need / day = gap ÷ days left incl. today. Cover = stock ÷ MTD daily average.</p>
+  </footer>
+</div>
+
+<script>
+// ===== Config: the "Refresh data" button opens this repo's workflow =====
+const GITHUB_REPO = "rcm5DaMon/samsung_summit";
+
+const PROG = { all: "Summit Device", a: "A Series" };
+const CAT = { A: "A Series", S: "S Series", Z: "Z Series", T: "Tablet", X: "Other" };
+const nf = new Intl.NumberFormat("id-ID");
+const fmt = (n) => nf.format(Math.round(n));
+const pct = (n) => (n == null || !isFinite(n)) ? "—" : Math.round(n * 100) + "%";
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const parseDate = (s) => new Date(s + "T00:00:00");
+const dayMs = 86400000;
+const shortName = (n) => n.replace(/^ERAFONE\s+(&\s+MORE\s+)?/, "").replace(/^SAMSUNG\s+(STORE\s+)?/, "SES ");
+const twoWords = (n) => n.split(" ").slice(0, 2).join(" ");
+const CH_SHORT = { "SAMSUNG STORE": "SES", "ERAFONE & MORE": "E&M", "ERAFONE": "Erafone", "FRANCHISE": "Franchise", "XL STORE": "XL", "INDOSAT STORE": "Indosat", "LOTTEMART": "Lotte", "AGRES": "Agres" };
+const chShort = (c) => CH_SHORT[c] || c;
+
+let D, STORES = [];
+const state = { prog: "all", bu: "", lob: "", tsh: "", q: "", store: "", pick: "", lvl: 1, open: new Set(), sortKey: "name", sortDir: "asc", brk: "bu", bSort: "achv_all", bDir: "desc" };
+
+fetch("data/summit.json", { cache: "no-store" })
+  .then((r) => r.json())
+  .then((json) => { D = prep(json); initUi(); render(); })
+  .catch((e) => { document.getElementById("sub").textContent = "Could not load data/summit.json - " + e; });
+
+// ---------- data ----------
+function prep(j) {
+  const start = parseDate(j.period_start), end = parseDate(j.period_end), asof = parseDate(j.sales_asof);
+  const totalDays = Math.round((end - start) / dayMs) + 1;
+  const doneDays = Math.max(0, Math.min(totalDays, Math.round((asof - start) / dayMs) + 1));
+  const remDays = Math.max(1, totalDays - doneDays);          // days left incl. today
+  const hasToday = !!j.today_date;
+  const split = (a) => (a || []).map((r) => r.split("|"));
+  const z = () => ({ all: 0, a: 0 });
+  const map = new Map();
+  split(j.targets).forEach(([site, name, bu, lob, tsh, ch, td, ta]) => {
+    map.set(site, { site, name: name || site, bu: bu || "(no BU)", lob: lob || "(no LOB)", tsh: tsh || "(no TSH)", ch,
+      t: { all: +td, a: +ta }, mtd: z(), est: z(), today: z(), stock: z(), orders: 0, days: [], models: [] });
+  });
+  STORES = [...map.values()];
+  STORES.forEach((s) => { s.days = Array.from({ length: totalDays }, () => [0, 0]); });
+  split(j.daily).forEach(([d, site, qa, qA]) => {
+    const s = map.get(site); if (!s) return;
+    const di = Math.round((parseDate(`${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6)}`) - start) / dayMs);
+    if (di < 0 || di >= totalDays) return;
+    s.days[di][0] += +qa; s.days[di][1] += +qA; s.mtd.all += +qa; s.mtd.a += +qA;
+  });
+  split(j.est).forEach(([site, ea, eA]) => { const s = map.get(site); if (s) { s.est.all = +ea; s.est.a = +eA; } });
+  split(j.mix).forEach(([site, cat, model, mtd, tod, stk]) => {
+    const s = map.get(site); if (!s) return;
+    s.models.push({ cat, model, mtd: +mtd, today: +tod, stock: +stk });
+    s.today.all += +tod; s.stock.all += +stk;
+    if (cat === "A") { s.today.a += +tod; s.stock.a += +stk; }
+  });
+  split(j.today_any).forEach(([site, n]) => { const s = map.get(site); if (s) s.orders = +n; });
+  const dcName = new Map(split(j.dcs).map(([site, name, bu]) => [site, { name, bu }]));
+  const dcStock = split(j.dc_stock).map(([site, cat, model, q]) => ({ site, cat, model, q: +q, ...(dcName.get(site) || { name: site, bu: "" }) }));
+  return { j, start, end, totalDays, doneDays, remDays, hasToday, dcStock };
+}
+
+// per-store metrics for the selected target
+function metrics(s, k = state.prog) {
+  const target = s.t[k], mtd = s.mtd[k], today = s.today[k], tot = mtd + today, est = s.est[k], stock = s.stock[k];
+  const exp = target * D.doneDays / D.totalDays;
+  const pace = target ? (exp ? mtd / exp : 1) : null;
+  const gap = Math.max(0, target - tot);
+  const rate = D.doneDays ? mtd / D.doneDays : 0;
+  return { target, mtd, today, tot, est, stock, exp, pace, gap, rate,
+    achv: target ? mtd / target : null, achvT: target ? tot / target : null, estAchv: target ? est / target : null,
+    onMtd: target > 0 && pace >= 1, onEst: target > 0 && est >= target,
+    need: gap / D.remDays, cover: rate ? stock / rate : (stock ? Infinity : null), short: target > 0 && stock < gap,
+    inactive: D.hasToday && today <= 0, noTrx: D.hasToday && s.orders === 0 };
+}
+
+// ---------- filters ----------
+const PICKS = {
+  mtdOn: ["on track (MTD)", (m) => m.onMtd], mtdOff: ["not on track (MTD)", (m) => !m.onMtd],
+  estOn: ["on track (estimate)", (m) => m.onEst], estOff: ["not on track (estimate)", (m) => !m.onEst],
+  inact: () => [`with no ${PROG[state.prog]} sale today`, (m) => m.inactive], noTrx: ["with no transaction at all today", (m) => m.noTrx],
+  short: ["with stock below remaining gap", (m) => m.short],
+};
+const pickDef = (k) => typeof PICKS[k] === "function" ? PICKS[k]() : PICKS[k];
+
+function scopeStores() {     // BU / LOB / TSH / search / store (no KPI pick)
+  if (state.store) return STORES.filter((s) => s.site === state.store);
+  return STORES.filter((s) => (!state.bu || s.bu === state.bu) && (!state.lob || s.lob === state.lob) && (!state.tsh || s.tsh === state.tsh)
+    && (!state.q || s.name.toLowerCase().includes(state.q) || s.site.toLowerCase().includes(state.q)));
+}
+function filtered() {
+  const rows = scopeStores();
+  if (!state.pick) return rows;
+  const f = pickDef(state.pick)[1];
+  return rows.filter((s) => f(metrics(s)));
+}
+
+function initUi() {
+  document.querySelectorAll("[data-prog]").forEach((b) => b.onclick = () => {
+    state.prog = b.dataset.prog;
+    document.querySelectorAll("[data-prog]").forEach((x) => x.setAttribute("aria-pressed", x === b));
+    render();
+  });
+  const onSel = (key) => (e) => {
+    state[key] = e.target.value; state.store = "";
+    if (key === "bu") { state.lob = ""; state.tsh = ""; }
+    if (key === "lob") state.tsh = "";
+    fillSelects(); render();
+  };
+  document.getElementById("fBu").onchange = onSel("bu");
+  document.getElementById("fLob").onchange = onSel("lob");
+  document.getElementById("fTsh").onchange = onSel("tsh");
+  document.getElementById("fSearch").oninput = (e) => { state.q = e.target.value.trim().toLowerCase(); render(); };
+  document.getElementById("fClear").onclick = () => {
+    Object.assign(state, { bu: "", lob: "", tsh: "", q: "", store: "", pick: "" });
+    document.getElementById("fSearch").value = ""; fillSelects(); render();
+  };
+  document.querySelectorAll("[data-lvl]").forEach((b) => b.onclick = () => { setLevel(+b.dataset.lvl); renderReview(filtered()); });
+  fillSelects();
+  setLevel(1);
+  document.querySelectorAll("[data-brk]").forEach((b) => b.onclick = () => {
+    state.brk = b.dataset.brk;
+    document.querySelectorAll("[data-brk]").forEach((x) => x.setAttribute("aria-pressed", x === b));
+    renderBreakdown(filtered());
+  });
+  document.querySelector("#brkTable thead").onclick = (e) => {
+    const c = e.target.closest("th"); if (!c || !c.dataset.k) return;
+    if (state.bSort === c.dataset.k) state.bDir = state.bDir === "asc" ? "desc" : "asc";
+    else { state.bSort = c.dataset.k; state.bDir = c.dataset.k === "name" ? "asc" : "desc"; }
+    renderBreakdown(filtered());
+  };
+  document.querySelector("#brkTable tbody").onclick = (e) => {
+    const tr = e.target.closest("tr[data-f]"); if (!tr) return;
+    const f = JSON.parse(tr.dataset.f);
+    const same = Object.keys(f).every((k) => state[k] === f[k]);
+    Object.assign(state, same ? { bu: "", lob: "", tsh: "" } : { bu: "", lob: "", tsh: "", ...f });
+    state.store = ""; fillSelects(); render();
+  };
+
+  const j = D.j, longDate = (s) => parseDate(s).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  document.getElementById("sub").textContent =
+    `Period ${longDate(j.period_start)} – ${longDate(j.period_end)} · ${D.doneDays} of ${D.totalDays} days complete (${pct(D.doneDays / D.totalDays)} time gone) · ${D.remDays} days left incl. today · ${STORES.length} stores`;
+  const m = document.getElementById("meta");
+  m.innerHTML = `
+    <button type="button" class="btn-ghost" id="shotSave" data-noshot title="Save the dashboard, as currently filtered, as a PNG">📷 Save PNG</button>
+    <button type="button" class="btn-ghost" id="shotCopy" data-noshot title="Copy the image to paste into WhatsApp / email">Copy image</button>
+    <span class="chip">Sales to ${longDate(j.sales_asof)}${D.hasToday ? ` + today until ${j.today_last_time.slice(0, 5)}` : ""}</span>
+    <span class="chip">Stock ${longDate(j.stock_date)}</span>
+    <span class="chip">Imported ${j.refreshed_at.slice(0, 16)} WIB</span>
+    <a class="btn" data-noshot target="_blank" rel="noopener" href="https://github.com/${GITHUB_REPO}/actions/workflows/refresh.yml">Refresh data ↗</a>`;
+  document.getElementById("shotSave").onclick = () => takeShot("save");
+  document.getElementById("shotCopy").onclick = () => takeShot("copy");
+  document.querySelectorAll(".f-asof").forEach((e) => e.textContent = longDate(j.sales_asof));
+  document.querySelectorAll(".f-stock").forEach((e) => e.textContent = longDate(j.stock_date));
+
+  document.querySelector("#revTable thead").onclick = (e) => {
+    const c = e.target.closest("th"); if (!c || !c.dataset.k) return;
+    if (state.sortKey === c.dataset.k) state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
+    else { state.sortKey = c.dataset.k; state.sortDir = c.dataset.k === "name" ? "asc" : "desc"; }
+    renderReview(filtered());
+  };
+  document.querySelector("#revTable tbody").onclick = (e) => {
+    const tr = e.target.closest("tr"); if (!tr) return;
+    if (tr.dataset.key) { state.open.has(tr.dataset.key) ? state.open.delete(tr.dataset.key) : state.open.add(tr.dataset.key); renderReview(filtered()); }
+    else if (tr.dataset.site) { state.store = state.store === tr.dataset.site ? "" : tr.dataset.site; render(); }
+  };
+}
+
+function fillSelects() {
+  const opts = (el, label, vals, cur) => {
+    el.innerHTML = `<option value="">All ${label}</option>` + vals.map((v) => `<option${v === cur ? " selected" : ""}>${esc(v)}</option>`).join("");
+  };
+  const uniq = (a) => [...new Set(a)].sort();
+  opts(document.getElementById("fBu"), "business units", uniq(STORES.map((s) => s.bu)), state.bu);
+  const s1 = STORES.filter((s) => !state.bu || s.bu === state.bu);
+  opts(document.getElementById("fLob"), "LOB", uniq(s1.map((s) => s.lob)), state.lob);
+  const s2 = s1.filter((s) => !state.lob || s.lob === state.lob);
+  opts(document.getElementById("fTsh"), "TSH", uniq(s2.map((s) => s.tsh)), state.tsh);
+}
+
+function setLevel(l) {
+  state.lvl = l; state.open.clear();
+  document.querySelectorAll("[data-lvl]").forEach((x) => x.setAttribute("aria-pressed", +x.dataset.lvl === l));
+  if (l === 0) return;
+  STORES.forEach((s) => {
+    state.open.add(s.lob);
+    if (l >= 2) state.open.add(s.lob + "|" + s.tsh);
+  });
+}
+
+// ---------- render ----------
+function render() {
+  const rows = filtered();
+  document.getElementById("fClear").hidden = !(state.bu || state.lob || state.tsh || state.q || state.store || state.pick);
+  renderKpis(scopeStores());
+  const bn = document.getElementById("banner");
+  const parts = [];
+  if (state.store) { const s = STORES.find((x) => x.site === state.store); parts.push(`store <b>${esc(s.site)} ${esc(s.name)}</b>`); }
+  if (state.pick) parts.push(`stores <b>${pickDef(state.pick)[0]}</b> · ${PROG[state.prog]} (${rows.length})`);
+  bn.style.display = parts.length ? "flex" : "none";
+  bn.innerHTML = parts.length ? `Showing only ${parts.join(" · ")} <button type="button" class="clear" id="bnClear">✕ Show all</button>` : "";
+  if (parts.length) document.getElementById("bnClear").onclick = () => { state.store = ""; state.pick = ""; render(); };
+  renderPace(rows); renderTsh(); renderBreakdown(rows); renderReview(rows); renderModels(rows); renderDc(rows);
+}
+
+function statusOf(pace, hasTarget) {
+  if (!hasTarget) return ["s-none", "No target"];
+  if (pace >= 1) return ["s-good", "On track"];
+  if (pace >= 0.8) return ["s-warn", "Slightly behind"];
+  return ["s-crit", "Behind"];
+}
+const statusHtml = ([cls, label]) => `<span class="status ${cls}"><i class="dot"></i>${label}</span>`;
+const estHtml = (m) => !m.target ? `<span class="muted">—</span>` : m.onEst
+  ? `<span class="status s-good"><i class="dot"></i>${pct(m.estAchv)}</span>`
+  : `<span class="status ${m.estAchv >= 0.9 ? "s-warn" : "s-crit"}"><i class="dot"></i>${pct(m.estAchv)}</span>`;
+
+function sumMetrics(rows, k = state.prog) {
+  const o = { n: rows.length, target: 0, mtd: 0, today: 0, tot: 0, est: 0, stock: 0, exp: 0, gap: 0, onMtd: 0, onEst: 0, inactive: 0, noTrx: 0, short: 0, withT: 0 };
+  rows.forEach((s) => {
+    const m = metrics(s, k);
+    ["target", "mtd", "today", "tot", "est", "stock", "exp", "gap"].forEach((x) => o[x] += m[x]);
+    if (m.target > 0) o.withT++;
+    if (m.onMtd) o.onMtd++; if (m.onEst) o.onEst++; if (m.inactive) o.inactive++; if (m.noTrx) o.noTrx++; if (m.short) o.short++;
+  });
+  o.achv = o.target ? o.mtd / o.target : null; o.achvT = o.target ? o.tot / o.target : null; o.estAchv = o.target ? o.est / o.target : null;
+  o.pace = o.target ? (o.exp ? o.mtd / o.exp : 1) : null; o.rate = D.doneDays ? o.mtd / D.doneDays : 0;
+  o.need = o.gap / D.remDays; o.cover = o.rate ? o.stock / o.rate : null;
+  o.gapAgg = Math.max(0, o.target - o.tot);
+  return o;
+}
+
+function renderKpis(rows) {
+  const expFrac = D.doneDays / D.totalDays;
+  const progCard = (k) => {
+    const o = sumMetrics(rows, k), sel = state.prog === k;
+    return `<div class="card kpi${sel ? " sel" : ""}" data-progcard="${k}" style="cursor:pointer" title="Click to review this target">
+      <div class="label">${PROG[k]} · MTD achievement</div>
+      <div class="value">${pct(o.achv)} <small>${fmt(o.mtd)} / ${fmt(o.target)}</small></div>
+      <div class="bar" title="Tick = time gone (${pct(expFrac)}) · circle = month-end estimate"><i style="width:${Math.min(100, (o.achv || 0) * 100)}%"></i><b style="left:${expFrac * 100}%"></b><u style="left:${Math.min(100, (o.estAchv || 0) * 100)}%"></u></div>
+      <div class="foot">${statusHtml(statusOf(o.pace, o.target > 0))} · time gone ${pct(expFrac)}</div>
+      <div class="est">Est. month-end <b>${pct(o.estAchv)}</b> · ${fmt(o.est)} units</div>
+      <div class="est">Incl. today <b>${pct(o.achvT)}</b> · gap ${fmt(o.gapAgg)}</div></div>`;
+  };
+  const o = sumMetrics(rows), P = PROG[state.prog];
+  const btn = (k, n, dis) => `<button type="button" data-pick="${k}" aria-pressed="${state.pick === k}" ${dis ? "disabled" : ""}><b>${dis ? "—" : fmt(n)}</b></button>`;
+  const track = `<div class="card kpi"><div class="label">Stores on track · ${P}</div>
+      <div class="pick">
+        ${btn("mtdOn", o.onMtd)}<span>on track MTD · <span class="s-crit">${btn("mtdOff", o.withT - o.onMtd).replace("<b>", "<b style='font-size:15px;color:var(--critical-text)'>")}</span> not</span>
+        <div class="sep"></div>
+        ${btn("estOn", o.onEst)}<span>on track by estimate · ${btn("estOff", o.withT - o.onEst).replace("<b>", "<b style='font-size:15px;color:var(--critical-text)'>")} not</span>
+      </div>
+      <div class="foot">of ${fmt(o.withT)} stores with a target · click a number to list them${o.onMtd === o.onEst ? `<br><span class="muted" title="SUM_month_est_quantity = MTD ÷ ${D.doneDays} days × ${D.totalDays}, so a store whose MTD is on pace is also on track by estimate">Same count: the estimate is the MTD run-rate × ${D.totalDays}/${D.doneDays}</span>` : ""}</div></div>`;
+  const runRate = o.rate, needDay = o.gapAgg / D.remDays;
+  const today = `<div class="card kpi"><div class="label">Today so far · ${P}</div>
+      <div class="value">${D.hasToday ? fmt(o.today) : "—"} <small>units</small></div>
+      <div class="foot">${D.hasToday ? `POS until ${D.j.today_last_time.slice(0, 5)} WIB · ${fmt(o.n - o.inactive)} stores sold` : "Today's POS not loaded yet"}</div>
+      <div class="est">Need <b>${needDay.toFixed(1)}</b>/day · run-rate <b>${runRate.toFixed(1)}</b>/day</div></div>`;
+  const inact = `<div class="card kpi"><div class="label">Inactive stores today</div>
+      <div class="pick">
+        ${btn("inact", o.inactive, !D.hasToday)}<span>no ${P} sale yet · of ${fmt(o.n)}</span>
+        ${btn("noTrx", o.noTrx, !D.hasToday)}<span>no transaction at all (any brand)</span>
+      </div>
+      <div class="foot">${D.hasToday ? `POS until ${D.j.today_last_time.slice(0, 5)} WIB · click a number to list them` : "Today's POS not loaded yet"}</div></div>`;
+  const pools = dcPools(rows), dcQ = D.dcStock.filter((r) => pools.has(r.bu) && (state.prog === "all" || r.cat === "A")).reduce((a, r) => a + r.q, 0);
+  const stock = `<div class="card kpi"><div class="label">Store stock · ${P}</div>
+      <div class="value">${fmt(o.stock)} <small>units</small></div>
+      <div class="foot">Cover ${o.cover == null ? "—" : Math.round(o.cover) + " days"} at MTD run-rate · remaining gap ${fmt(o.gapAgg)} · DC +${fmt(dcQ)}</div>
+      <div class="pick">${btn("short", o.short)}<span>stores with stock below their gap</span></div></div>`;
+  document.getElementById("kpis").innerHTML = progCard("all") + progCard("a") + track + today + inact + stock;
+  document.querySelectorAll("[data-pick]").forEach((b) => b.onclick = (e) => {
+    e.stopPropagation(); state.pick = state.pick === b.dataset.pick ? "" : b.dataset.pick; state.store = ""; render();
+  });
+  document.querySelectorAll("[data-progcard]").forEach((c) => c.onclick = () => {
+    state.prog = c.dataset.progcard; document.querySelectorAll("[data-prog]").forEach((x) => x.setAttribute("aria-pressed", x.dataset.prog === state.prog)); render();
+  });
+}
+
+// DC pool for the stores in view: NASA DCs serve 3NASA (Samsung stores); Erafone DCs serve the other BUs
+function dcPools(rows) {
+  const p = new Set(); rows.forEach((s) => p.add(s.bu === "3NASA" ? "3NASA" : "1MULTIBRAND")); return p;
+}
+
+// ---------- charts ----------
+function tipAt(box, html, x, y) {
+  const t = box.querySelector(".tip"); t.innerHTML = html; t.style.display = "block";
+  const bw = box.clientWidth, tw = t.offsetWidth;
+  t.style.left = Math.min(bw - tw - 4, Math.max(4, x + 12)) + "px"; t.style.top = (y - 10) + "px";
+}
+const hideTip = (box) => box.querySelector(".tip").style.display = "none";
+function svgPoint(svg, evt) {
+  const r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+  return { x: (evt.clientX - r.left) * vb.width / r.width, y: (evt.clientY - r.top) * vb.height / r.height, px: evt.clientX - r.left, py: evt.clientY - r.top };
+}
+function niceTicks(max, n) {
+  const raw = max / n, mag = Math.pow(10, Math.floor(Math.log10(raw))), step = [1, 2, 2.5, 5, 10].map((s) => s * mag).find((s) => s >= raw);
+  const out = []; for (let v = 0; v <= max; v += step) out.push(v); return out;
+}
+
+function renderPace(rows) {
+  const svg = document.getElementById("paceChart"), box = document.getElementById("paceBox");
+  const W = 640, H = 330, m = { l: 48, r: 16, t: 12, b: 28 }, iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const k = state.prog, ki = k === "all" ? 0 : 1, o = sumMetrics(rows);
+  document.getElementById("paceNote").textContent = `${PROG[k]} units · ${rows.length} store${rows.length === 1 ? "" : "s"} · completed days from sales_vs_stock, today as a separate point`;
+  const perDay = new Array(D.totalDays).fill(0);
+  rows.forEach((s) => s.days.forEach((d, i) => perDay[i] += d[ki]));
+  const cum = []; let c = 0;
+  for (let i = 0; i < D.doneDays; i++) { c += perDay[i]; cum.push(c); }
+  const c0 = c, yMax = Math.max(o.target, o.est, c + o.today, 1) * 1.12;
+  const x = (i) => m.l + (i + 0.5) * iw / D.totalDays, y = (v) => m.t + ih - v / yMax * ih;
+  let g = niceTicks(yMax, 5).map((t) => `<line x1="${m.l}" x2="${W - m.r}" y1="${y(t)}" y2="${y(t)}" stroke="var(--grid)"/><text x="${m.l - 6}" y="${y(t) + 4}" text-anchor="end">${fmt(t)}</text>`).join("");
+  for (let i = 0; i < D.totalDays; i += (i === 0 ? 4 : 5)) g += `<text x="${x(i)}" y="${H - 8}" text-anchor="middle">${i + 1}</text>`;
+  if ((D.totalDays - 1) % 5 !== 4) g += `<text x="${x(D.totalDays - 1)}" y="${H - 8}" text-anchor="middle">${D.totalDays}</text>`;
+  g += `<line x1="${x(-0.5)}" y1="${y(0)}" x2="${x(D.totalDays - 0.5)}" y2="${y(o.target)}" stroke="var(--target)" stroke-width="2" stroke-dasharray="5 4"/>
+        <text x="${m.l + 8}" y="${m.t + 14}" style="fill:var(--text-primary)">Target ${fmt(o.target)} · Est. month-end <tspan style="fill:var(--series-1);font-weight:600">${fmt(o.est)} (${pct(o.estAchv)})</tspan>${D.hasToday ? ` · MTD incl. today ${fmt(c0 + o.today)}` : ""}</text>`;
+  const bw = Math.max(2, iw / D.totalDays - 4);
+  perDay.slice(0, D.doneDays).forEach((v, i) => { if (v > 0) g += `<rect x="${x(i) - bw / 2}" y="${y(v)}" width="${bw}" height="${y(0) - y(v)}" rx="2" fill="var(--series-1-soft)"/>`; });
+  if (D.doneDays) {
+    g += `<line x1="${x(D.doneDays - 1)}" y1="${y(c)}" x2="${x(D.totalDays - 0.5)}" y2="${y(o.est)}" stroke="var(--series-1)" stroke-width="1.5" stroke-dasharray="1 4" stroke-linecap="round"/>
+          <circle cx="${x(D.totalDays - 0.5)}" cy="${y(o.est)}" r="4" fill="var(--surface-1)" stroke="var(--series-1)" stroke-width="2"/>`;
+  }
+  const pts = [[x(-0.5), y(0)], ...cum.map((v, i) => [x(i), y(v)])];
+  g += `<polyline points="${pts.map((p) => p.join(",")).join(" ")}" fill="none" stroke="var(--series-1)" stroke-width="2" stroke-linejoin="round"/>`;
+  cum.forEach((v, i) => g += `<circle cx="${x(i)}" cy="${y(v)}" r="3.5" fill="var(--series-1)" stroke="var(--surface-1)" stroke-width="1.5"/>`);
+  if (D.hasToday) {
+    const ti = D.doneDays;
+    g += `<line x1="${x(ti - 1)}" y1="${y(c)}" x2="${x(ti)}" y2="${y(c + o.today)}" stroke="var(--series-1)" stroke-width="2" stroke-dasharray="2 3"/>
+          <circle cx="${x(ti)}" cy="${y(c + o.today)}" r="4" fill="var(--surface-1)" stroke="var(--series-1)" stroke-width="2"/>
+`;
+  }
+  g += `<line id="pcross" x1="0" x2="0" y1="${m.t}" y2="${m.t + ih}" stroke="var(--text-muted)" stroke-width="1" visibility="hidden"/>
+        <rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent" id="phit"/>`;
+  svg.innerHTML = g;
+  const cross = svg.querySelector("#pcross");
+  svg.querySelector("#phit").onmousemove = (e) => {
+    const p = svgPoint(svg, e), i = Math.max(0, Math.min(D.totalDays - 1, Math.floor((p.x - m.l) / iw * D.totalDays)));
+    cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i)); cross.setAttribute("visibility", "visible");
+    const exp = o.target * (i + 1) / D.totalDays;
+    const act = i < D.doneDays ? cum[i] : (i === D.doneDays && D.hasToday ? c + o.today : null);
+    const lbl = new Date(D.start.getTime() + i * dayMs).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+    tipAt(box, `<div>${lbl}${i === D.doneDays && D.hasToday ? " (today, partial)" : ""}</div>
+      ${act != null ? `<div>Actual cum. <b>${fmt(act)}</b>${i < D.doneDays ? ` · day ${fmt(perDay[i])}` : ""}</div>` : ""}
+      <div>Target pace <b>${fmt(exp)}</b></div>${act != null ? `<div>vs pace <b>${act - exp >= 0 ? "+" : ""}${fmt(act - exp)}</b></div>` : ""}`, p.px, p.py);
+  };
+  svg.querySelector("#phit").onmouseleave = () => { cross.setAttribute("visibility", "hidden"); hideTip(box); };
+}
+
+function renderTsh() {
+  const svg = document.getElementById("tshChart"), box = document.getElementById("tshBox");
+  const base = STORES.filter((s) => (!state.bu || s.bu === state.bu) && (!state.lob || s.lob === state.lob));
+  const by = new Map();
+  base.forEach((s) => (by.get(s.tsh) || by.set(s.tsh, []).get(s.tsh)).push(s));
+  const list = [...by].map(([tsh, ss]) => ({ tsh, ...sumMetrics(ss) })).filter((o) => o.target > 0).sort((a, b) => b.achv - a.achv);
+  const W = 440, rowH = 36, m = { l: 140, r: 92, t: 6 }, H = m.t + list.length * rowH + 22, iw = W - m.l - m.r;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const expFrac = D.doneDays / D.totalDays;
+  const maxV = Math.max(expFrac, 0.25, ...list.map((o) => Math.max(o.achv, o.estAchv > 1.3 ? 1.3 : o.estAchv))) * 1.08;
+  const x = (v) => m.l + Math.min(v, maxV) / maxV * iw;
+  let g = "";
+  [0, 0.25, 0.5, 0.75, 1, 1.25].filter((v) => v <= maxV).forEach((v) => g += `<line x1="${x(v)}" x2="${x(v)}" y1="${m.t}" y2="${H - 20}" stroke="var(--grid)"/><text x="${x(v)}" y="${H - 6}" text-anchor="middle">${v * 100}%</text>`);
+  const storeTsh = state.store ? (STORES.find((s) => s.site === state.store) || {}).tsh : "";
+  list.forEach((o, i) => {
+    const yy = m.t + i * rowH + 6, sel = storeTsh ? storeTsh === o.tsh : (!state.tsh || state.tsh === o.tsh);
+    g += `<text x="${m.l - 8}" y="${yy + 9}" text-anchor="end" style="fill:var(--text-primary)">${esc(twoWords(o.tsh))}</text>
+      <text x="${m.l - 8}" y="${yy + 22}" text-anchor="end">${o.onMtd}/${o.withT} on track</text>
+      <rect x="${m.l}" y="${yy}" width="${Math.max(2, x(o.achv) - m.l)}" height="14" rx="4" fill="var(--series-1)" opacity="${sel ? 1 : 0.35}"/>
+      <line x1="${x(expFrac)}" x2="${x(expFrac)}" y1="${yy - 3}" y2="${yy + 17}" stroke="var(--text-primary)" stroke-width="2"/>
+      <circle cx="${x(o.estAchv)}" cy="${yy + 7}" r="4" fill="var(--surface-1)" stroke="var(--series-1)" stroke-width="2" opacity="${sel ? 1 : 0.5}"/>
+      <text x="${W - m.r + 10}" y="${yy + 9}" style="fill:var(--text-primary);font-weight:600">${pct(o.achv)}</text>
+      <text x="${W - m.r + 10}" y="${yy + 22}">est ${pct(o.estAchv)}</text>
+      <rect x="0" y="${yy - 6}" width="${W}" height="${rowH}" fill="transparent" data-i="${i}" class="hit" style="cursor:pointer"/>`;
+  });
+  svg.innerHTML = g;
+  svg.querySelectorAll(".hit").forEach((r) => {
+    const o = list[+r.dataset.i];
+    r.onmousemove = (e) => { const p = svgPoint(svg, e); tipAt(box, `<div><b>${esc(o.tsh)}</b> · ${o.n} stores</div><div>MTD <b>${fmt(o.mtd)}</b> / target <b>${fmt(o.target)}</b> (${pct(o.achv)}) · time gone ${pct(expFrac)}</div><div>Est. month-end <b>${fmt(o.est)}</b> (${pct(o.estAchv)})</div><div>On track: MTD ${o.onMtd}/${o.withT} · estimate ${o.onEst}/${o.withT}</div><div style="color:var(--text-muted)">Click to filter</div>`, p.px, p.py); };
+    r.onmouseleave = () => hideTip(box);
+    r.onclick = () => {
+      state.tsh = state.tsh === o.tsh ? "" : o.tsh; state.store = ""; fillSelects(); render();
+    };
+  });
+}
+
+// ---------- review table: BU -> LOB -> TSH -> Store ----------
+function topModels(rows, n = 5) {
+  const by = new Map();
+  rows.forEach((s) => s.models.forEach((x) => { if (state.prog === "a" && x.cat !== "A") return; by.set(x.model, (by.get(x.model) || 0) + x.mtd + x.today); }));
+  return [...by].sort((a, b) => b[1] - a[1]).slice(0, n).filter((x) => x[1] > 0).map((x) => x[0]);
+}
+function oosOf(s, top) {
+  const have = new Set(s.models.filter((x) => x.stock > 0).map((x) => x.model));
+  return top.filter((mo) => !have.has(mo));
+}
+function achvCell(achv, pace, has) {
+  if (!has) return `<span class="muted">—</span>`;
+  const [cls, label] = statusOf(pace, has), f = D.doneDays / D.totalDays;
+  return `<span class="mini"><i style="width:${Math.min(100, achv * 100)}%"></i><b style="left:${f * 100}%"></b></span><span class="status ${cls}" title="${label}"><i class="dot"></i>${pct(achv)}</span>`;
+}
+function coverHtml(cover, stock) {
+  if (cover == null) return `<span class="muted">—</span>`;
+  if (!isFinite(cover)) return `<span class="muted" title="Stock but no sales MTD">no sales</span>`;
+  const cls = cover < 7 ? "s-crit" : cover < D.remDays ? "s-warn" : cover > 60 ? "s-none" : "s-good";
+  return `<span class="status ${cls}" title="${cover < D.remDays ? "Runs out before month-end at the MTD run-rate" : cover > 60 ? "More than 60 days of stock" : "Covers the rest of the month"}"><i class="dot"></i>${Math.floor(cover)}d</span>`;
+}
+
+function renderReview(rows) {
+  const t = document.getElementById("revTable"), P = PROG[state.prog];
+  const top = topModels(rows.length ? rows : STORES);
+  const expFrac = D.doneDays / D.totalDays;
+  document.getElementById("reviewNote").innerHTML =
+    `${P} · ${rows.length} stores. Click a group row to open or close it, a store row to focus the page on that store, a column to sort. ` +
+    `<b>On track MTD</b> = MTD ≥ target × ${D.doneDays}/${D.totalDays}. <b>On track est.</b> = month_est ≥ target. <b>No sale / No trx</b> = no ${P} unit today / no transaction at all today. ` +
+    `<b>Top-5 OOS</b> = which of this view's 5 best sellers (${top.map(esc).join(", ") || "—"}) the store has zero stock of.`;
+  const cols = [
+    ["name", "LOB / TSH / Store", "l", ""], ["n", "Stores", "", ""],
+    ["target", "Target", "bl", P], ["mtd", "MTD", "", ""], ["achv", "Achv · status", "l", ""],
+    ["today", "Units", "bl", "Today"], ["achvT", "Achv +today", "", ""], ["inactive", "No sale", "", ""],
+    ["est", "Units", "bl", "Month-end est."], ["estAchv", "Achv", "", ""],
+    ["gap", "Gap", "bl", "To close"], ["need", "Need/day", "", ""],
+    ["onMtd", "MTD", "bl", "On track"], ["onEst", "Est.", "", ""],
+    ["stock", "Units", "bl", "Store stock " + D.j.stock_date.slice(8) + "/" + D.j.stock_date.slice(5, 7)], ["cover", "Cover", "", ""], ["short", "vs gap", "", ""], ["oos", "Top-5 OOS", "l", ""]];
+  t.tHead.innerHTML = `<tr>${cols.map(([k, l, c, grp]) => `<th data-k="${k}" class="${c}${grp ? " gstart" : ""}" ${state.sortKey === k ? `aria-sort="${state.sortDir === "asc" ? "ascending" : "descending"}"` : ""}><span class="grp">${grp || "&nbsp;"}</span>${l}</th>`).join("")}</tr>`;
+
+  // build tree
+  const tree = new Map();
+  rows.forEach((s) => {
+    const l = tree.get(s.lob) || tree.set(s.lob, new Map()).get(s.lob);
+    (l.get(s.tsh) || l.set(s.tsh, []).get(s.tsh)).push(s);
+  });
+  const key = state.sortKey, dir = state.sortDir === "asc" ? 1 : -1;
+  const sortVal = (name, o) => key === "name" ? name : key === "status" ? (o.pace ?? -1) : key === "oos" ? (o.oosN ?? 0) : key === "short" ? (o.target ? o.stock - o.gap : 1e9) : (o[key] == null ? -1 : (isFinite(o[key]) ? o[key] : 1e9));
+  const sortEntries = (arr) => arr.sort((a, b) => { const va = sortVal(a[0], a[1]), vb = sortVal(b[0], b[1]); return (typeof va === "string" ? va.localeCompare(vb) : va - vb) * dir; });
+
+  const groupRow = (lvl, k, label, o, kids) => {
+    const open = state.open.has(k);
+    const oos = kids.filter((s) => oosOf(s, top).length > 0).length;
+    return `<tr class="g${lvl}" data-key="${esc(k)}">
+      <td class="l name" style="padding-left:${8 + lvl * 18}px" title="${esc(label)}"><span class="caret">${open ? "▼" : "▶"}</span><span class="lvl">${["LOB", "TSH"][lvl]}</span>${esc(label)}</td>
+      <td>${fmt(o.n)}</td>
+      <td class="bl">${fmt(o.target)}</td><td>${fmt(o.mtd)}</td>
+      <td class="l">${achvCell(o.achv, o.pace, o.target > 0)}</td>
+      <td class="bl ${o.today ? "" : "muted"}">${D.hasToday ? fmt(o.today) : "—"}</td><td>${pct(o.achvT)}</td>
+      <td class="${o.inactive ? "s-crit" : "muted"}" title="Stores with no sale yet today">${D.hasToday ? fmt(o.inactive) : "—"}</td>
+      <td class="bl">${fmt(o.est)}</td><td>${estHtml({ target: o.target, onEst: o.est >= o.target, estAchv: o.estAchv })}</td>
+      <td class="bl">${fmt(o.gapAgg)}</td><td>${(o.gapAgg / D.remDays).toFixed(1)}</td>
+      <td class="bl"><b class="${o.onMtd === o.withT ? "s-good" : ""}">${o.onMtd}</b><span class="muted">/${o.withT}</span></td>
+      <td><b class="${o.onEst === o.withT ? "s-good" : ""}">${o.onEst}</b><span class="muted">/${o.withT}</span></td>
+      <td class="bl">${fmt(o.stock)}</td><td>${coverHtml(o.cover, o.stock)}</td>
+      <td class="${o.short ? "s-crit" : "muted"}" title="Stores whose stock is below their remaining gap">${o.short ? o.short + " short" : "0 short"}</td>
+      <td class="l ${oos ? "oos" : "muted"}">${oos ? oos + " store" + (oos === 1 ? "" : "s") : "—"}</td></tr>`;
+  };
+  const storeRow = (s, m, oos) => {
+    const has = m.target > 0;
+    const cover = !has ? "—" : m.gap === 0 ? `<span class="status s-good"><i class="dot"></i>Target hit</span>`
+      : m.stock >= m.gap ? `<span class="status s-good"><i class="dot"></i>Covered</span>`
+      : `<span class="status ${m.stock >= m.gap * 0.5 ? "s-warn" : "s-crit"}"><i class="dot"></i>Short ${fmt(m.gap - m.stock)}</span>`;
+    return `<tr class="st ${state.store === s.site ? "sel" : ""}" data-site="${s.site}" title="${esc(s.name)} · ${esc(s.ch)} · click to focus on this store">
+      <td class="l name" style="padding-left:44px"><span class="site">${s.site}</span>${esc(shortName(s.name))}</td><td class="muted" title="${esc(s.ch)}">${esc(chShort(s.ch))}</td>
+      <td class="bl">${has ? fmt(m.target) : `<span class="muted">0</span>`}</td><td>${fmt(m.mtd)}</td>
+      <td class="l">${achvCell(m.achv, m.pace, has)}</td>
+      <td class="bl ${m.today ? "" : "muted"}">${D.hasToday ? fmt(m.today) : "—"}</td><td>${pct(m.achvT)}</td>
+      <td>${!D.hasToday ? "—" : m.inactive ? `<span class="s-crit" title="${s.orders ? s.orders + " orders today (other products)" : "No transaction at all today"}">${s.orders ? "No sale" : "No trx"}</span>` : `<span class="muted">sold</span>`}</td>
+      <td class="bl">${fmt(m.est)}</td><td>${estHtml(m)}</td>
+      <td class="bl">${fmt(m.gap)}</td><td>${has ? m.need.toFixed(1) : "—"}</td>
+      <td class="bl">${has ? (m.onMtd ? `<span class="s-good">✓</span>` : `<span class="s-crit">✗</span>`) : "—"}</td>
+      <td>${has ? (m.onEst ? `<span class="s-good">✓</span>` : `<span class="s-crit">✗</span>`) : "—"}</td>
+      <td class="bl">${fmt(m.stock)}</td><td>${coverHtml(m.cover, m.stock)}</td><td>${cover}</td>
+      <td class="l ${oos.length ? "oos" : "muted"}" title="${esc(oos.join(", "))}">${oos.length ? esc(oos.slice(0, 3).join(", ")) + (oos.length > 3 ? ` +${oos.length - 3}` : "") : "—"}</td></tr>`;
+  };
+
+  let html = "";
+  const lobE = sortEntries([...tree].map(([lob, tshs]) => { const ss = [...tshs.values()].flat(); return [lob, { ...sumMetrics(ss), ss, tshs, oosN: ss.filter((s) => oosOf(s, top).length).length }]; }));
+  lobE.forEach(([lob, ol]) => {
+    html += groupRow(0, lob, lob, ol, ol.ss);
+    if (!state.open.has(lob)) return;
+    const tshE = sortEntries([...ol.tshs].map(([tsh, ss]) => [tsh, { ...sumMetrics(ss), ss, oosN: ss.filter((s) => oosOf(s, top).length).length }]));
+    tshE.forEach(([tsh, ot]) => {
+      const kt = lob + "|" + tsh;
+      html += groupRow(1, kt, tsh, ot, ot.ss);
+      if (!state.open.has(kt)) return;
+      const st = sortEntries(ot.ss.map((s) => { const m = metrics(s), oos = oosOf(s, top); return [s.name, { ...m, n: 1, s, oosList: oos, oosN: oos.length, onMtd: m.onMtd ? 1 : 0, onEst: m.onEst ? 1 : 0 }]; }));
+      st.forEach(([, o]) => html += storeRow(o.s, metrics(o.s), o.oosList));
+    });
+  });
+  t.tBodies[0].innerHTML = html || `<tr><td class="l" colspan="${cols.length}">No stores match the filter.</td></tr>`;
+  const o = sumMetrics(rows);
+  const oosAll = rows.filter((s) => oosOf(s, top).length).length;
+  t.tFoot.innerHTML = `<tr><td class="l">Total</td><td>${fmt(o.n)}</td><td class="bl">${fmt(o.target)}</td><td>${fmt(o.mtd)}</td><td class="l">${achvCell(o.achv, o.pace, o.target > 0)}</td><td class="bl">${D.hasToday ? fmt(o.today) : "—"}</td><td>${pct(o.achvT)}</td><td>${D.hasToday ? fmt(o.inactive) : "—"}</td>
+    <td class="bl">${fmt(o.est)}</td><td>${pct(o.estAchv)}</td><td class="bl">${fmt(o.gapAgg)}</td><td>${(o.gapAgg / D.remDays).toFixed(1)}</td>
+    <td class="bl">${o.onMtd}/${o.withT}</td><td>${o.onEst}/${o.withT}</td>
+    <td class="bl">${fmt(o.stock)}</td><td>${o.cover == null ? "—" : Math.round(o.cover) + "d"}</td><td>${o.short} short</td><td class="l">${oosAll} stores</td></tr>`;
+}
+
+// ---------- breakdown table (like iP18 vs iP17): both targets side by side ----------
+const BRK = { bu: [["bu", "Business unit"]], ch: [["bu", "Business unit"], ["ch", "Channel"]], lob: [["lob", "LOB"]], tsh: [["lob", "LOB"], ["tsh", "TSH"]] };
+function renderBreakdown(rows) {
+  const t = document.getElementById("brkTable"), keys = BRK[state.brk], last = keys[keys.length - 1][0];
+  const by = new Map();
+  rows.forEach((s) => { const k = keys.map(([kk]) => s[kk]).join("\u0001"); (by.get(k) || by.set(k, []).get(k)).push(s); });
+  const grp = (ss) => {
+    const a = sumMetrics(ss, "all"), b = sumMetrics(ss, "a");
+    return { ss, a, b, n: ss.length, achv_all: a.achv, achv_a: b.achv, est_all: a.estAchv, est_a: b.estAchv, mtd_all: a.mtd, mtd_a: b.mtd,
+             tgt_all: a.target, tgt_a: b.target, today_all: a.today, today_a: b.today, on_all: a.onMtd, on_a: b.onMtd, inact: a.inactive, stock: a.stock, stock_a: b.stock };
+  };
+  let groups = [...by].map(([k, ss]) => ({ ...grp(ss), labels: keys.map(([kk]) => ss[0][kk]), name: ss[0][last] }));
+  const dir = state.bDir === "asc" ? 1 : -1, sk = state.bSort;
+  const val = (g) => sk === "name" ? g.labels.join(" ") : (g[sk] ?? -1);
+  groups.sort((x, y) => (keys.length > 1 ? x.labels[0].localeCompare(y.labels[0]) : 0)
+    || ((typeof val(x) === "string" ? val(x).localeCompare(val(y)) : val(x) - val(y)) * dir));
+  const tot = grp(rows), expFrac = D.doneDays / D.totalDays;
+  document.getElementById("brkNote").innerHTML = `${rows.length} stores in the current filter · time gone ${pct(expFrac)} · On track = stores with MTD ≥ target × ${D.doneDays}/${D.totalDays} (same as estimate ≥ target). Click a row to filter the page to it, click a column to sort.`;
+  const th = (k, l, c = "", g = "") => `<th data-k="${k}" class="${c}${g ? " gstart" : ""}" ${state.bSort === k ? `aria-sort="${state.bDir === "asc" ? "ascending" : "descending"}"` : ""}><span class="grp">${g || "&nbsp;"}</span>${l}</th>`;
+  t.tHead.innerHTML = `<tr>${keys.map(([, l], i) => th(i === keys.length - 1 ? "name" : "", l, "l")).join("")}${th("n", "Stores")}
+    ${th("tgt_all", "Target", "bl", "Summit Device")}${th("mtd_all", "MTD")}${th("achv_all", "Achv", "l")}${th("today_all", "Today")}${th("est_all", "Est. achv")}${th("on_all", "On track")}
+    ${th("tgt_a", "Target", "bl", "A Series")}${th("mtd_a", "MTD")}${th("achv_a", "Achv", "l")}${th("today_a", "Today")}${th("est_a", "Est. achv")}${th("on_a", "On track")}
+    ${th("inact", "No Samsung sale", "bl", "Today")}${th("stock", "Device", "bl", "Store stock")}${th("stock_a", "A Series")}</tr>`;
+  const cells = (g) => {
+    const a = g.a, b = g.b;
+    const on = (o) => `<b class="${o.onMtd === o.withT && o.withT ? "s-good" : ""}">${o.onMtd}</b><span class="muted">/${o.withT}</span>`;
+    const est = (o) => estHtml({ target: o.target, onEst: o.est >= o.target, estAchv: o.estAchv });
+    return `<td>${fmt(g.n)}</td>
+      <td class="bl">${fmt(a.target)}</td><td>${fmt(a.mtd)}</td><td class="l">${achvCell(a.achv, a.pace, a.target > 0)}</td><td class="${a.today ? "" : "muted"}">${D.hasToday ? fmt(a.today) : "—"}</td><td>${est(a)}</td><td>${on(a)}</td>
+      <td class="bl">${fmt(b.target)}</td><td>${fmt(b.mtd)}</td><td class="l">${achvCell(b.achv, b.pace, b.target > 0)}</td><td class="${b.today ? "" : "muted"}">${D.hasToday ? fmt(b.today) : "—"}</td><td>${est(b)}</td><td>${on(b)}</td>
+      <td class="bl ${a.inactive ? "s-crit" : "muted"}">${D.hasToday ? fmt(a.inactive) : "—"}</td><td class="bl">${fmt(a.stock)}</td><td>${fmt(b.stock)}</td>`;
+  };
+  const filt = (g) => {
+    if (state.brk === "bu" || state.brk === "ch") return { bu: g.labels[0] };
+    if (state.brk === "lob") return { lob: g.labels[0] };
+    return { lob: g.labels[0], tsh: g.labels[1] };
+  };
+  let prev = "";
+  t.tBodies[0].innerHTML = groups.map((g) => {
+    const f = filt(g), sel = Object.keys(f).every((k) => state[k] === f[k]);
+    const lbl = g.labels.map((l, i) => {
+      const show = !(i === 0 && keys.length > 1 && l === prev);     // parent label once per group
+      return `<td class="l ${i < keys.length - 1 ? "muted" : ""}"><b style="font-weight:${i === keys.length - 1 ? 650 : 400}">${show ? esc(l) : ""}</b></td>`;
+    }).join("");
+    prev = g.labels[0];
+    return `<tr class="st ${sel ? "sel" : ""}" data-f='${esc(JSON.stringify(f))}' title="Click to filter the page to ${esc(g.labels.join(" · "))}">${lbl}${cells(g)}</tr>`;
+  }).join("") || `<tr><td class="l" colspan="20">No stores match the filter.</td></tr>`;
+  t.tFoot.innerHTML = `<tr><td class="l">TOTAL</td>${keys.length > 1 ? "<td></td>" : ""}${cells(tot)}</tr>`;
+}
+
+// ---------- stock analysis by model ----------
+function renderModels(rows) {
+  const t = document.getElementById("modelTable"), k = state.prog, P = PROG[k];
+  const ok = (cat) => k === "all" || cat === "A";
+  const pools = dcPools(rows);
+  const by = new Map();
+  const get = (model, cat) => by.get(model) || by.set(model, { model, cat, mtd: 0, today: 0, stock: 0, dc: 0, withStock: 0, selling: 0, zeroSelling: 0 }).get(model);
+  rows.forEach((s) => s.models.forEach((x) => {
+    if (!ok(x.cat)) return;
+    const o = get(x.model, x.cat);
+    o.mtd += x.mtd; o.today += x.today; o.stock += x.stock;
+    if (x.stock > 0) o.withStock++;
+  }));
+  // stores that sold the model MTD but now hold zero stock of it
+  rows.forEach((s) => { const have = new Map(s.models.map((x) => [x.model, x])); by.forEach((o) => { const x = have.get(o.model); if (x && x.mtd > 0) { o.selling++; if (x.stock <= 0) o.zeroSelling++; } }); });
+  D.dcStock.forEach((r) => { if (ok(r.cat) && pools.has(r.bu)) get(r.model, r.cat).dc += r.q; });
+  const list = [...by.values()].filter((o) => o.mtd || o.today || o.stock || o.dc).sort((a, b) => (b.mtd + b.today) - (a.mtd + a.today) || b.stock - a.stock);
+  const n = rows.length, tot = list.reduce((a, o) => ({ mtd: a.mtd + o.mtd, today: a.today + o.today, stock: a.stock + o.stock, dc: a.dc + o.dc }), { mtd: 0, today: 0, stock: 0, dc: 0 });
+  const health = (o) => {
+    const rate = D.doneDays ? o.mtd / D.doneDays : 0, c = rate ? o.stock / rate : null;
+    if (!rate) return o.stock ? `<span class="status s-none"><i class="dot"></i>No sales MTD</span>` : "—";
+    if (c < 7) return `<span class="status s-crit"><i class="dot"></i>Low · refill</span>`;
+    if (c < D.remDays) return `<span class="status s-warn"><i class="dot"></i>Runs out before month-end</span>`;
+    if (c > 60) return `<span class="status s-none"><i class="dot"></i>Overstock (&gt;60d)</span>`;
+    return `<span class="status s-good"><i class="dot"></i>OK</span>`;
+  };
+  document.getElementById("stockNote").innerHTML = `${P} · ${n} stores in view · store stock on ${D.j.stock_date} · DC = ${[...pools].map((p) => p === "3NASA" ? "NASA DCs" : "Erafone DCs").join(" + ")}. ` +
+    `Cover = stock ÷ MTD daily average (${D.doneDays} days). "Sold, now 0 stock" = stores that sold the model this month but hold none now.`;
+  t.tHead.innerHTML = `<tr><th class="l">Model</th><th class="l">Series</th><th class="bl">MTD</th><th>Today</th><th>Avg / day</th><th>Share</th>
+    <th class="bl">Store stock</th><th>Cover</th><th>DC stock</th><th>Cover incl. DC</th><th class="bl">Stores with stock</th><th>Sold, now 0 stock</th><th class="l bl">Stock health</th></tr>`;
+  t.tBodies[0].innerHTML = list.map((o) => {
+    const rate = D.doneDays ? o.mtd / D.doneDays : 0;
+    return `<tr><td class="l"><b>${esc(o.model)}</b></td><td class="l muted">${CAT[o.cat] || o.cat}</td>
+      <td class="bl">${fmt(o.mtd)}</td><td class="${o.today ? "" : "muted"}">${D.hasToday ? fmt(o.today) : "—"}</td><td>${rate.toFixed(1)}</td><td>${pct(tot.mtd ? o.mtd / tot.mtd : null)}</td>
+      <td class="bl">${fmt(o.stock)}</td><td>${coverHtml(rate ? o.stock / rate : (o.stock ? Infinity : null))}</td>
+      <td>${fmt(o.dc)}</td><td>${rate ? Math.round((o.stock + o.dc) / rate) + "d" : "—"}</td>
+      <td class="bl">${fmt(o.withStock)}<span class="muted">/${n}</span></td>
+      <td class="${o.zeroSelling ? "s-crit" : "muted"}">${o.zeroSelling ? fmt(o.zeroSelling) + " of " + fmt(o.selling) : "0"}</td>
+      <td class="l bl">${health(o)}</td></tr>`;
+  }).join("") || `<tr><td class="l" colspan="13">No models for this filter.</td></tr>`;
+  const rate = D.doneDays ? tot.mtd / D.doneDays : 0;
+  t.tFoot.innerHTML = `<tr><td class="l">Total · ${list.length} models</td><td></td><td class="bl">${fmt(tot.mtd)}</td><td>${D.hasToday ? fmt(tot.today) : "—"}</td><td>${rate.toFixed(1)}</td><td>100%</td>
+    <td class="bl">${fmt(tot.stock)}</td><td>${rate ? Math.round(tot.stock / rate) + "d" : "—"}</td><td>${fmt(tot.dc)}</td><td>${rate ? Math.round((tot.stock + tot.dc) / rate) + "d" : "—"}</td><td class="bl"></td><td></td><td class="bl"></td></tr>`;
+}
+
+function renderDc(rows) {
+  const t = document.getElementById("dcTable"), pools = dcPools(rows);
+  const cats = ["A", "S", "Z", "T", "X"];
+  const by = new Map();
+  D.dcStock.forEach((r) => {
+    if (!pools.has(r.bu)) return;
+    const o = by.get(r.site) || by.set(r.site, { site: r.site, name: r.name, bu: r.bu, c: {}, tot: 0, models: new Map() }).get(r.site);
+    o.c[r.cat] = (o.c[r.cat] || 0) + r.q; o.tot += r.q; o.models.set(r.model, (o.models.get(r.model) || 0) + r.q);
+  });
+  const list = [...by.values()].sort((a, b) => a.bu.localeCompare(b.bu) || b.tot - a.tot);
+  const used = cats.filter((c) => list.some((o) => o.c[c]));
+  document.getElementById("dcNote").textContent = `Stock on ${D.j.stock_date}. NASA DCs serve Samsung stores (3NASA); Erafone DCs serve Erafone, Erafone & More, Franchise, XL/Indosat and joint-business stores. Hover a row for its top models.`;
+  t.tHead.innerHTML = `<tr><th class="l">DC</th><th class="l">Serves</th>${used.map((c) => `<th class="${c === "A" ? "bl" : ""}">${CAT[c]}</th>`).join("")}<th class="bl">Total</th><th class="l">Top models</th></tr>`;
+  const top = (o) => [...o.models].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([m, q]) => `${m} ${q}`).join(" · ");
+  t.tBodies[0].innerHTML = list.map((o) => `<tr><td class="l"><span class="site">${o.site}</span>${esc(o.name)}</td><td class="l muted">${o.bu === "3NASA" ? "Samsung stores" : "Multibrand & others"}</td>
+    ${used.map((c) => `<td class="${c === "A" ? "bl" : ""} ${o.c[c] ? "" : "muted"}">${fmt(o.c[c] || 0)}</td>`).join("")}<td class="bl"><b>${fmt(o.tot)}</b></td><td class="l muted">${esc(top(o))}</td></tr>`).join("")
+    || `<tr><td class="l" colspan="9">No DC stock.</td></tr>`;
+  const sum = (c) => list.reduce((a, o) => a + (o.c[c] || 0), 0);
+  t.tFoot.innerHTML = `<tr><td class="l">Total · ${list.length} DCs</td><td></td>${used.map((c) => `<td class="${c === "A" ? "bl" : ""}">${fmt(sum(c))}</td>`).join("")}<td class="bl">${fmt(list.reduce((a, o) => a + o.tot, 0))}</td><td></td></tr>`;
+}
+
+// ===== Screenshot: render the dashboard (as filtered) to PNG without external libraries =====
+function toast(msg, ms = 2500) {
+  const t = document.getElementById("toast"); t.textContent = msg; t.style.display = "block";
+  clearTimeout(toast._t); toast._t = setTimeout(() => (t.style.display = "none"), ms);
+}
+function shotName() {
+  const now = new Date(), p = (n) => String(n).padStart(2, "0");
+  const scope = state.store ? state.store : [state.bu, state.lob, state.tsh].filter(Boolean).join("_") || "All";
+  return `Summit_Samsung_${PROG[state.prog]}_${scope}_${now.getFullYear()}${p(now.getMonth() + 1)}${p(now.getDate())}-${p(now.getHours())}${p(now.getMinutes())}.png`.replace(/[^\w.\-]+/g, "_");
+}
+function cloneWithStyles(src) {
+  const dst = src.cloneNode(false);
+  if (src.nodeType === 1) {
+    const cs = getComputedStyle(src);
+    for (let i = 0; i < cs.length; i++) dst.style.setProperty(cs[i], cs.getPropertyValue(cs[i]));
+    if (src.tagName === "SELECT") {
+      const span = document.createElement("span");
+      for (let i = 0; i < cs.length; i++) span.style.setProperty(cs[i], cs.getPropertyValue(cs[i]));
+      span.style.display = "inline-block"; span.style.overflow = "hidden"; span.style.whiteSpace = "nowrap";
+      span.textContent = src.selectedOptions[0] ? src.selectedOptions[0].textContent : "";
+      return span;
+    }
+    if (src.tagName === "INPUT") dst.setAttribute("value", src.value);
+  }
+  for (const c of src.childNodes) {
+    if (c.nodeType === 1 && (c.hasAttribute("data-noshot") || c.classList.contains("tip"))) continue;
+    if (c.nodeType === 8) continue;
+    dst.appendChild(cloneWithStyles(c));
+  }
+  return dst;
+}
+async function renderShot() {
+  const area = document.getElementById("shotArea");
+  const clone = cloneWithStyles(area);
+  clone.querySelectorAll(".tscroll").forEach((e) => { e.style.maxHeight = "none"; e.style.overflow = "visible"; });
+  clone.querySelectorAll("th, tfoot td").forEach((e) => { e.style.position = "static"; });
+  clone.style.margin = "0";
+  const W = Math.ceil(Math.max(area.getBoundingClientRect().width, area.scrollWidth));
+  clone.style.width = W + "px";
+  const holder = document.createElement("div");
+  holder.style.cssText = "position:absolute;left:-100000px;top:0;";
+  holder.appendChild(clone); document.body.appendChild(holder);
+  const H = Math.ceil(clone.getBoundingClientRect().height);
+  document.body.removeChild(holder);
+  const bg = getComputedStyle(document.body).backgroundColor;
+  const xml = new XMLSerializer().serializeToString(clone);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}"><foreignObject x="0" y="0" width="100%" height="100%">` +
+              `<div xmlns="http://www.w3.org/1999/xhtml" style="background:${bg};width:${W}px;height:${H}px">${xml}</div></foreignObject></svg>`;
+  const img = new Image();
+  img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  await img.decode();
+  const scale = 2, canvas = document.createElement("canvas");
+  canvas.width = W * scale; canvas.height = H * scale;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.scale(scale, scale); ctx.drawImage(img, 0, 0);
+  return new Promise((res, rej) => canvas.toBlob((b) => (b ? res(b) : rej(new Error("toBlob failed"))), "image/png"));
+}
+async function takeShot(mode) {
+  const btns = [document.getElementById("shotSave"), document.getElementById("shotCopy")];
+  btns.forEach((b) => (b.disabled = true)); toast("Capturing…", 10000);
+  try {
+    if (mode === "copy" && navigator.clipboard && window.ClipboardItem) {
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": renderShot() })]);
+      toast("Image copied - paste it into WhatsApp / email (Ctrl+V)");
+    } else {
+      const blob = await renderShot();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob); a.download = shotName();
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      toast(mode === "copy" ? "Copy isn't supported in this browser - saved as PNG instead" : "Saved " + a.download);
+    }
+  } catch (e) { console.error(e); toast("Screenshot failed: " + e.message, 5000); }
+  finally { btns.forEach((b) => (b.disabled = false)); }
+}
+</script>
+</body>
+</html>
