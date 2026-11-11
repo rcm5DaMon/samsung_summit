@@ -1,7 +1,7 @@
 -- Samsung Summit (November) - single import query (Power BI "import mode" style)
 -- Returns ONE row with ONE column `j` (compact JSON). Rows inside are "|"-delimited strings.
 -- Summit has two targets per store:
---   Summit Device : master_data.target_summit_november.target_qty   = all SAMSUNG Device qty
+--   Summit Device : master_data.target_summit_november.target_qty   = SAMSUNG Device qty EXCLUDING Tablet (Detail_Cat <> 'TABLET')
 --   A Series      : master_data.target_aseries_samsung.target_Aseries = SAMSUNG Device, Detail_Cat = 'A SERIES' qty
 --   Racing        : master_data.target_racing_samsung, 5 tiers per store = SAMSUNG Device, Detail_Cat in S SERIES / Z SERIES qty
 -- Store list = every store in the three target files (site codes are TRIMmed: the Racing file has ' F285'). Store attributes come from sales_b2c.master_store_r5.
@@ -51,7 +51,8 @@ svs AS (
          SUM_quantity AS q, SUM_month_est_quantity AS est
   FROM `e-smart-433113.region_data.sales_vs_stock`, p
   WHERE brandname = 'SAMSUNG' AND Product_Category = 'Device'
-    AND ((line = 'sales' AND order_date BETWEEN p.s AND p.e) OR line IN ('stock', 'stock_dc'))
+    -- sales: this period + the whole previous month (for Racing growth MoM)
+    AND ((line = 'sales' AND order_date BETWEEN DATE_SUB(p.s, INTERVAL 1 MONTH) AND p.e) OR line IN ('stock', 'stock_dc'))
 ),
 -- last completed sales day = latest sales date in the whole table (any brand)
 asof AS (
@@ -61,17 +62,23 @@ stk_date AS (SELECT MAX(d) AS stock_date FROM svs WHERE line = 'stock'),
 
 sales AS (
   SELECT d, site, cat, model, variant, SUM(q) AS q, SUM(est) AS est
-  FROM svs WHERE line = 'sales' AND site IN (SELECT site FROM tgt)
+  FROM svs, p WHERE line = 'sales' AND d >= p.s AND site IN (SELECT site FROM tgt)
   GROUP BY ALL
+),
+-- last month S+Z qty per store (Racing growth index = month estimate / last month)
+lm AS (
+  SELECT site, SUM(q) AS lm_r
+  FROM svs, p WHERE line = 'sales' AND d < p.s AND cat IN ('S', 'Z') AND site IN (SELECT site FROM tgt)
+  GROUP BY site
 ),
 -- daily units per store: all Samsung Device, and A Series
 daily AS (
-  SELECT d, site, SUM(q) AS q_all, SUM(IF(cat = 'A', q, 0)) AS q_a, SUM(IF(cat IN ('S', 'Z'), q, 0)) AS q_r
+  SELECT d, site, SUM(IF(cat <> 'T', q, 0)) AS q_all, SUM(IF(cat = 'A', q, 0)) AS q_a, SUM(IF(cat IN ('S', 'Z'), q, 0)) AS q_r
   FROM sales GROUP BY d, site
 ),
 -- month estimate per store = SUM(SUM_month_est_quantity) from sales_vs_stock
 est AS (
-  SELECT site, SUM(est) AS e_all, SUM(IF(cat = 'A', est, 0)) AS e_a, SUM(IF(cat IN ('S', 'Z'), est, 0)) AS e_r
+  SELECT site, SUM(IF(cat <> 'T', est, 0)) AS e_all, SUM(IF(cat = 'A', est, 0)) AS e_a, SUM(IF(cat IN ('S', 'Z'), est, 0)) AS e_r
   FROM sales GROUP BY site
 ),
 stk AS (
@@ -143,14 +150,16 @@ SELECT TO_JSON_STRING(STRUCT(
                       CAST(t.r1 AS STRING), '|', CAST(t.r2 AS STRING), '|', CAST(t.r3 AS STRING), '|', CAST(t.r4 AS STRING), '|', CAST(t.r5 AS STRING), '|',
                       CAST(t.in_s AS STRING), '|', CAST(t.in_a AS STRING), '|', CAST(t.in_r AS STRING))
         FROM tgt t LEFT JOIN ms m USING (site) ORDER BY t.site) AS targets,
-  -- yyyymmdd|site|units all Samsung Device|units A Series|units S+Z (Racing)   (completed days, sales_vs_stock)
+  -- yyyymmdd|site|units Summit (Device excl. Tablet)|units A Series|units S+Z (Racing)   (completed days, sales_vs_stock)
   ARRAY(SELECT CONCAT(FORMAT_DATE('%Y%m%d', d), '|', site, '|', CAST(q_all AS STRING), '|', CAST(q_a AS STRING), '|', CAST(q_r AS STRING))
         FROM daily WHERE q_all <> 0 OR q_a <> 0 OR q_r <> 0 ORDER BY d, site) AS daily,
-  -- site|month est all Device|month est A Series|month est S+Z   (SUM_month_est_quantity)
+  -- site|month est Summit (excl. Tablet)|month est A Series|month est S+Z   (SUM_month_est_quantity)
   ARRAY(SELECT CONCAT(site, '|', CAST(ROUND(e_all, 1) AS STRING), '|', CAST(ROUND(e_a, 1) AS STRING), '|', CAST(ROUND(e_r, 1) AS STRING)) FROM est ORDER BY site) AS est,
   -- site|cat|model|variant|MTD units|today units|store stock|month est units   (cat: A=A Series, S, Z, T=Tablet, X=other)
   ARRAY(SELECT CONCAT(site, '|', cat, '|', model, '|', variant, '|', CAST(mtd AS STRING), '|', CAST(tod AS STRING), '|', CAST(stock AS STRING), '|', CAST(ROUND(est, 1) AS STRING))
         FROM mix WHERE mtd <> 0 OR tod <> 0 OR stock <> 0 ORDER BY site, cat, model, variant) AS mix,
+  -- site|last month S+Z qty
+  ARRAY(SELECT CONCAT(site, '|', CAST(lm_r AS STRING)) FROM lm WHERE lm_r <> 0 ORDER BY site) AS lm,
   -- site|PAID orders today (any brand, any product)
   ARRAY(SELECT CONCAT(site, '|', CAST(orders AS STRING)) FROM today_any ORDER BY site) AS today_any,
   -- DC site|cat|model|variant|stock units
