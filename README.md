@@ -67,7 +67,9 @@ You can refresh many times a day.
 - **Today:** PAID POS orders in `region_data.sales_daily`, used only when its date is after the last completed day, so nothing is counted twice.
   **No sale** = no Summit/A Series unit today. **No trx** = no PAID transaction of any product today.
 - **Gap:** target − (MTD + today). **Need / day:** gap ÷ days left including today.
-- **Stock:** latest `stock` snapshot per store and `stock_dc` per DC (Samsung Device). **Cover:** stock ÷ MTD daily average.
+- **Stock:** latest `stock` snapshot per store and `stock_dc` per DC (Samsung Device).
+  **Cover (days):** (stock ÷ month-end estimate qty) × 30.42, where the estimate is `SUM_month_est_quantity` and 30.42 = average days per month.
+  Group rows (TSH, LOB, total, model) use their summed stock ÷ summed estimate.
   Stock is flagged when it runs out before month-end, under 7 days is low, and over 60 days is overstock.
   **Stock vs gap:** whether store stock covers its remaining gap.
 - **Top-5 OOS:** of the 5 best-selling models in the current view, the ones the store has zero stock of.

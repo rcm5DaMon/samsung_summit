@@ -290,7 +290,7 @@
 
   <footer>
     <p>Source: BigQuery e-smart-433113 · sales and stock: region_data.sales_vs_stock (completed days to <span class="f-asof"></span>, stock <span class="f-stock"></span>) · today: region_data.sales_daily (PAID POS) · targets: master_data.target_summit_november and master_data.target_aseries_samsung · store attributes: sales_b2c.master_store_r5.</p>
-    <p>Summit Device = all SAMSUNG, Product_Category = Device units. A Series = SAMSUNG Device with Detail_Cat = A SERIES. MTD = SUM_quantity for completed days. Estimate = SUM_month_est_quantity (completed-day run-rate × 30). On track (MTD) = MTD ≥ target × days gone ÷ 30. On track (estimate) = estimate ≥ target. Today = PAID POS orders in sales_daily, only counted when its date is after the last completed day. Gap = target − (MTD + today). Need / day = gap ÷ days left incl. today. Cover = stock ÷ MTD daily average.</p>
+    <p>Summit Device = all SAMSUNG, Product_Category = Device units. A Series = SAMSUNG Device with Detail_Cat = A SERIES. MTD = SUM_quantity for completed days. Estimate = SUM_month_est_quantity (completed-day run-rate × 30). On track (MTD) = MTD ≥ target × days gone ÷ 30. On track (estimate) = estimate ≥ target. Today = PAID POS orders in sales_daily, only counted when its date is after the last completed day. Gap = target − (MTD + today). Need / day = gap ÷ days left incl. today. Cover (days) = (stock ÷ month-end estimate qty) × 30.42.</p>
   </footer>
 </div>
 
@@ -308,6 +308,9 @@ const parseDate = (s) => new Date(s + "T00:00:00");
 const dayMs = 86400000;
 const shortName = (n) => n.replace(/^ERAFONE\s+(&\s+MORE\s+)?/, "").replace(/^SAMSUNG\s+(STORE\s+)?/, "SES ");
 const twoWords = (n) => n.split(" ").slice(0, 2).join(" ");
+// Cover (days) = (stock / month-end estimate qty) x 30.42 average days per month
+const DAYS_PER_MONTH = 30.42;
+const coverOf = (stock, est) => est > 0 ? stock / est * DAYS_PER_MONTH : (stock > 0 ? Infinity : null);
 const CH_SHORT = { "SAMSUNG STORE": "SES", "ERAFONE & MORE": "E&M", "ERAFONE": "Erafone", "FRANCHISE": "Franchise", "XL STORE": "XL", "INDOSAT STORE": "Indosat", "LOTTEMART": "Lotte", "AGRES": "Agres" };
 const chShort = (c) => CH_SHORT[c] || c;
 
@@ -342,9 +345,9 @@ function prep(j) {
     s.days[di][0] += +qa; s.days[di][1] += +qA; s.mtd.all += +qa; s.mtd.a += +qA;
   });
   split(j.est).forEach(([site, ea, eA]) => { const s = map.get(site); if (s) { s.est.all = +ea; s.est.a = +eA; } });
-  split(j.mix).forEach(([site, cat, model, mtd, tod, stk]) => {
+  split(j.mix).forEach(([site, cat, model, mtd, tod, stk, est]) => {
     const s = map.get(site); if (!s) return;
-    s.models.push({ cat, model, mtd: +mtd, today: +tod, stock: +stk });
+    s.models.push({ cat, model, mtd: +mtd, today: +tod, stock: +stk, est: +(est || 0) });
     s.today.all += +tod; s.stock.all += +stk;
     if (cat === "A") { s.today.a += +tod; s.stock.a += +stk; }
   });
@@ -364,7 +367,7 @@ function metrics(s, k = state.prog) {
   return { target, mtd, today, tot, est, stock, exp, pace, gap, rate,
     achv: target ? mtd / target : null, achvT: target ? tot / target : null, estAchv: target ? est / target : null,
     onMtd: target > 0 && pace >= 1, onEst: target > 0 && est >= target,
-    need: gap / D.remDays, cover: rate ? stock / rate : (stock ? Infinity : null), short: target > 0 && stock < gap,
+    need: gap / D.remDays, cover: coverOf(stock, est), short: target > 0 && stock < gap,
     inactive: D.hasToday && today <= 0, noTrx: D.hasToday && s.orders === 0 };
 }
 
@@ -518,7 +521,7 @@ function sumMetrics(rows, k = state.prog) {
   });
   o.achv = o.target ? o.mtd / o.target : null; o.achvT = o.target ? o.tot / o.target : null; o.estAchv = o.target ? o.est / o.target : null;
   o.pace = o.target ? (o.exp ? o.mtd / o.exp : 1) : null; o.rate = D.doneDays ? o.mtd / D.doneDays : 0;
-  o.need = o.gap / D.remDays; o.cover = o.rate ? o.stock / o.rate : null;
+  o.need = o.gap / D.remDays; o.cover = coverOf(o.stock, o.est);
   o.gapAgg = Math.max(0, o.target - o.tot);
   return o;
 }
@@ -558,7 +561,7 @@ function renderKpis(rows) {
   const pools = dcPools(rows), dcQ = D.dcStock.filter((r) => pools.has(r.bu) && (state.prog === "all" || r.cat === "A")).reduce((a, r) => a + r.q, 0);
   const stock = `<div class="card kpi"><div class="label">Store stock · ${P}</div>
       <div class="value">${fmt(o.stock)} <small>units</small></div>
-      <div class="foot">Cover ${o.cover == null ? "—" : Math.round(o.cover) + " days"} at MTD run-rate · remaining gap ${fmt(o.gapAgg)} · DC +${fmt(dcQ)}</div>
+      <div class="foot">Cover ${o.cover == null || !isFinite(o.cover) ? "—" : Math.floor(o.cover) + " days"} (stock ÷ est. × 30.42) · remaining gap ${fmt(o.gapAgg)} · DC +${fmt(dcQ)}</div>
       <div class="pick">${btn("short", o.short)}<span>stores with stock below their gap</span></div></div>`;
   document.getElementById("kpis").innerHTML = progCard("all") + progCard("a") + track + today + inact + stock;
   document.querySelectorAll("[data-pick]").forEach((b) => b.onclick = (e) => {
@@ -691,9 +694,9 @@ function achvCell(achv, pace, has) {
 }
 function coverHtml(cover, stock) {
   if (cover == null) return `<span class="muted">—</span>`;
-  if (!isFinite(cover)) return `<span class="muted" title="Stock but no sales MTD">no sales</span>`;
+  if (!isFinite(cover)) return `<span class="muted" title="Stock but no estimated sales this month">no sales</span>`;
   const cls = cover < 7 ? "s-crit" : cover < D.remDays ? "s-warn" : cover > 60 ? "s-none" : "s-good";
-  return `<span class="status ${cls}" title="${cover < D.remDays ? "Runs out before month-end at the MTD run-rate" : cover > 60 ? "More than 60 days of stock" : "Covers the rest of the month"}"><i class="dot"></i>${Math.floor(cover)}d</span>`;
+  return `<span class="status ${cls}" title="${cover < D.remDays ? "Runs out before month-end at the estimated pace" : cover > 60 ? "More than 60 days of stock" : "Covers the rest of the month"}"><i class="dot"></i>${Math.floor(cover)}d</span>`;
 }
 
 function renderReview(rows) {
@@ -781,7 +784,7 @@ function renderReview(rows) {
   t.tFoot.innerHTML = `<tr><td class="l">Total</td><td>${fmt(o.n)}</td><td class="bl">${fmt(o.target)}</td><td>${fmt(o.mtd)}</td><td class="l">${achvCell(o.achv, o.pace, o.target > 0)}</td><td class="bl">${D.hasToday ? fmt(o.today) : "—"}</td><td>${pct(o.achvT)}</td><td>${D.hasToday ? fmt(o.inactive) : "—"}</td>
     <td class="bl">${fmt(o.est)}</td><td>${pct(o.estAchv)}</td><td class="bl">${fmt(o.gapAgg)}</td><td>${(o.gapAgg / D.remDays).toFixed(1)}</td>
     <td class="bl">${o.onMtd}/${o.withT}</td><td>${o.onEst}/${o.withT}</td>
-    <td class="bl">${fmt(o.stock)}</td><td>${o.cover == null ? "—" : Math.round(o.cover) + "d"}</td><td>${o.short} short</td><td class="l">${oosAll} stores</td></tr>`;
+    <td class="bl">${fmt(o.stock)}</td><td>${o.cover == null || !isFinite(o.cover) ? "—" : Math.floor(o.cover) + "d"}</td><td>${o.short} short</td><td class="l">${oosAll} stores</td></tr>`;
 }
 
 // ---------- breakdown table (like iP18 vs iP17): both targets side by side ----------
@@ -840,43 +843,42 @@ function renderModels(rows) {
   const ok = (cat) => k === "all" || cat === "A";
   const pools = dcPools(rows);
   const by = new Map();
-  const get = (model, cat) => by.get(model) || by.set(model, { model, cat, mtd: 0, today: 0, stock: 0, dc: 0, withStock: 0, selling: 0, zeroSelling: 0 }).get(model);
+  const get = (model, cat) => by.get(model) || by.set(model, { model, cat, mtd: 0, today: 0, stock: 0, est: 0, dc: 0, withStock: 0, selling: 0, zeroSelling: 0 }).get(model);
   rows.forEach((s) => s.models.forEach((x) => {
     if (!ok(x.cat)) return;
     const o = get(x.model, x.cat);
-    o.mtd += x.mtd; o.today += x.today; o.stock += x.stock;
+    o.mtd += x.mtd; o.today += x.today; o.stock += x.stock; o.est += x.est;
     if (x.stock > 0) o.withStock++;
   }));
   // stores that sold the model MTD but now hold zero stock of it
   rows.forEach((s) => { const have = new Map(s.models.map((x) => [x.model, x])); by.forEach((o) => { const x = have.get(o.model); if (x && x.mtd > 0) { o.selling++; if (x.stock <= 0) o.zeroSelling++; } }); });
   D.dcStock.forEach((r) => { if (ok(r.cat) && pools.has(r.bu)) get(r.model, r.cat).dc += r.q; });
   const list = [...by.values()].filter((o) => o.mtd || o.today || o.stock || o.dc).sort((a, b) => (b.mtd + b.today) - (a.mtd + a.today) || b.stock - a.stock);
-  const n = rows.length, tot = list.reduce((a, o) => ({ mtd: a.mtd + o.mtd, today: a.today + o.today, stock: a.stock + o.stock, dc: a.dc + o.dc }), { mtd: 0, today: 0, stock: 0, dc: 0 });
+  const n = rows.length, tot = list.reduce((a, o) => ({ mtd: a.mtd + o.mtd, today: a.today + o.today, stock: a.stock + o.stock, est: a.est + o.est, dc: a.dc + o.dc }), { mtd: 0, today: 0, stock: 0, est: 0, dc: 0 });
+  const days = (c) => c == null || !isFinite(c) ? "—" : Math.floor(c) + "d";
   const health = (o) => {
-    const rate = D.doneDays ? o.mtd / D.doneDays : 0, c = rate ? o.stock / rate : null;
-    if (!rate) return o.stock ? `<span class="status s-none"><i class="dot"></i>No sales MTD</span>` : "—";
+    const c = coverOf(o.stock, o.est);
+    if (!(o.est > 0)) return o.stock ? `<span class="status s-none"><i class="dot"></i>No sales MTD</span>` : "—";
     if (c < 7) return `<span class="status s-crit"><i class="dot"></i>Low · refill</span>`;
     if (c < D.remDays) return `<span class="status s-warn"><i class="dot"></i>Runs out before month-end</span>`;
     if (c > 60) return `<span class="status s-none"><i class="dot"></i>Overstock (&gt;60d)</span>`;
     return `<span class="status s-good"><i class="dot"></i>OK</span>`;
   };
   document.getElementById("stockNote").innerHTML = `${P} · ${n} stores in view · store stock on ${D.j.stock_date} · DC = ${[...pools].map((p) => p === "3NASA" ? "NASA DCs" : "Erafone DCs").join(" + ")}. ` +
-    `Cover = stock ÷ MTD daily average (${D.doneDays} days). "Sold, now 0 stock" = stores that sold the model this month but hold none now.`;
-  t.tHead.innerHTML = `<tr><th class="l">Model</th><th class="l">Series</th><th class="bl">MTD</th><th>Today</th><th>Avg / day</th><th>Share</th>
+    `Cover = (stock ÷ month-end estimate qty) × 30.42. "Sold, now 0 stock" = stores that sold the model this month but hold none now.`;
+  t.tHead.innerHTML = `<tr><th class="l">Model</th><th class="l">Series</th><th class="bl">MTD</th><th>Today</th><th>Est. month</th><th>Share</th>
     <th class="bl">Store stock</th><th>Cover</th><th>DC stock</th><th>Cover incl. DC</th><th class="bl">Stores with stock</th><th>Sold, now 0 stock</th><th class="l bl">Stock health</th></tr>`;
   t.tBodies[0].innerHTML = list.map((o) => {
-    const rate = D.doneDays ? o.mtd / D.doneDays : 0;
     return `<tr><td class="l"><b>${esc(o.model)}</b></td><td class="l muted">${CAT[o.cat] || o.cat}</td>
-      <td class="bl">${fmt(o.mtd)}</td><td class="${o.today ? "" : "muted"}">${D.hasToday ? fmt(o.today) : "—"}</td><td>${rate.toFixed(1)}</td><td>${pct(tot.mtd ? o.mtd / tot.mtd : null)}</td>
-      <td class="bl">${fmt(o.stock)}</td><td>${coverHtml(rate ? o.stock / rate : (o.stock ? Infinity : null))}</td>
-      <td>${fmt(o.dc)}</td><td>${rate ? Math.round((o.stock + o.dc) / rate) + "d" : "—"}</td>
+      <td class="bl">${fmt(o.mtd)}</td><td class="${o.today ? "" : "muted"}">${D.hasToday ? fmt(o.today) : "—"}</td><td>${fmt(o.est)}</td><td>${pct(tot.mtd ? o.mtd / tot.mtd : null)}</td>
+      <td class="bl">${fmt(o.stock)}</td><td>${coverHtml(coverOf(o.stock, o.est))}</td>
+      <td>${fmt(o.dc)}</td><td>${days(coverOf(o.stock + o.dc, o.est))}</td>
       <td class="bl">${fmt(o.withStock)}<span class="muted">/${n}</span></td>
       <td class="${o.zeroSelling ? "s-crit" : "muted"}">${o.zeroSelling ? fmt(o.zeroSelling) + " of " + fmt(o.selling) : "0"}</td>
       <td class="l bl">${health(o)}</td></tr>`;
   }).join("") || `<tr><td class="l" colspan="13">No models for this filter.</td></tr>`;
-  const rate = D.doneDays ? tot.mtd / D.doneDays : 0;
-  t.tFoot.innerHTML = `<tr><td class="l">Total · ${list.length} models</td><td></td><td class="bl">${fmt(tot.mtd)}</td><td>${D.hasToday ? fmt(tot.today) : "—"}</td><td>${rate.toFixed(1)}</td><td>100%</td>
-    <td class="bl">${fmt(tot.stock)}</td><td>${rate ? Math.round(tot.stock / rate) + "d" : "—"}</td><td>${fmt(tot.dc)}</td><td>${rate ? Math.round((tot.stock + tot.dc) / rate) + "d" : "—"}</td><td class="bl"></td><td></td><td class="bl"></td></tr>`;
+  t.tFoot.innerHTML = `<tr><td class="l">Total · ${list.length} models</td><td></td><td class="bl">${fmt(tot.mtd)}</td><td>${D.hasToday ? fmt(tot.today) : "—"}</td><td>${fmt(tot.est)}</td><td>100%</td>
+    <td class="bl">${fmt(tot.stock)}</td><td>${days(coverOf(tot.stock, tot.est))}</td><td>${fmt(tot.dc)}</td><td>${days(coverOf(tot.stock + tot.dc, tot.est))}</td><td class="bl"></td><td></td><td class="bl"></td></tr>`;
 }
 
 function renderDc(rows) {
