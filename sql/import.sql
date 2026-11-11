@@ -105,12 +105,12 @@ today_any AS (
   WHERE sd.d = tm.today_date AND sd.site IN (SELECT site FROM tgt)
   GROUP BY sd.site
 ),
--- store x model: MTD (completed days), today, store stock
+-- store x model: MTD (completed days), today, store stock, month estimate
 mix AS (
-  SELECT site, cat, model, SUM(mtd) AS mtd, SUM(tod) AS tod, SUM(stock) AS stock FROM (
-    SELECT site, cat, model, q AS mtd, 0 AS tod, 0 AS stock FROM sales
-    UNION ALL SELECT site, cat, model, 0, CAST(units AS INT64), 0 FROM today
-    UNION ALL SELECT site, cat, model, 0, 0, q FROM stk WHERE line = 'stock')
+  SELECT site, cat, model, SUM(mtd) AS mtd, SUM(tod) AS tod, SUM(stock) AS stock, SUM(est) AS est FROM (
+    SELECT site, cat, model, q AS mtd, 0 AS tod, 0 AS stock, est FROM sales
+    UNION ALL SELECT site, cat, model, 0, CAST(units AS INT64), 0, 0 FROM today
+    UNION ALL SELECT site, cat, model, 0, 0, q, 0 FROM stk WHERE line = 'stock')
   GROUP BY site, cat, model
 )
 
@@ -131,8 +131,8 @@ SELECT TO_JSON_STRING(STRUCT(
         FROM daily WHERE q_all <> 0 OR q_a <> 0 ORDER BY d, site) AS daily,
   -- site|month est all Device|month est A Series   (SUM_month_est_quantity)
   ARRAY(SELECT CONCAT(site, '|', CAST(ROUND(e_all, 1) AS STRING), '|', CAST(ROUND(e_a, 1) AS STRING)) FROM est ORDER BY site) AS est,
-  -- site|cat|model|MTD units|today units|store stock   (cat: A=A Series, S, Z, T=Tablet, X=other)
-  ARRAY(SELECT CONCAT(site, '|', cat, '|', model, '|', CAST(mtd AS STRING), '|', CAST(tod AS STRING), '|', CAST(stock AS STRING))
+  -- site|cat|model|MTD units|today units|store stock|month est units   (cat: A=A Series, S, Z, T=Tablet, X=other)
+  ARRAY(SELECT CONCAT(site, '|', cat, '|', model, '|', CAST(mtd AS STRING), '|', CAST(tod AS STRING), '|', CAST(stock AS STRING), '|', CAST(ROUND(est, 1) AS STRING))
         FROM mix WHERE mtd <> 0 OR tod <> 0 OR stock <> 0 ORDER BY site, cat, model) AS mix,
   -- site|PAID orders today (any brand, any product)
   ARRAY(SELECT CONCAT(site, '|', CAST(orders AS STRING)) FROM today_any ORDER BY site) AS today_any,
