@@ -52,7 +52,9 @@ You can refresh many times a day.
   (target, MTD, achievement, today, estimate, stores on track), plus stores with no Samsung sale today, store stock and a TOTAL row.
   Click a row to filter the page, click a column to sort.
 - **Review table:** LOB → TSH → Store, collapsible. The "Show down to" buttons set the level. Click a store to focus the whole page on it.
-- **Stock analysis by model:** MTD sales, today, store stock, days of cover, DC stock, stores that sold a model but now hold none, stock health.
+- **Stock analysis:** grouped by Detail_Cat (A / S / Z Series, Tablet), broken down by Model_Type_Detail + Model_Category
+  (e.g. "A57 5G 8/256 GB"). Shows MTD, today, month estimate, store stock, days of cover, DC stock, stores that sold it but now
+  hold none, and stock health. Click a category row to open or close it.
 - **DC stock:** Erafone DCs (serve Multibrand, Channel Store and Joint Business stores) and NASA DCs (serve Samsung stores).
 - **Save PNG / Copy image** for WhatsApp.
 

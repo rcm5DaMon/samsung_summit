@@ -267,7 +267,7 @@
   <section class="card table-card">
     <div class="table-head">
       <div>
-        <h2>Stock analysis · by model</h2>
+        <h2>Stock analysis · by Detail_Cat and model</h2>
         <p class="note" style="margin:0" id="stockNote"></p>
       </div>
     </div>
@@ -315,7 +315,7 @@ const CH_SHORT = { "SAMSUNG STORE": "SES", "ERAFONE & MORE": "E&M", "ERAFONE": "
 const chShort = (c) => CH_SHORT[c] || c;
 
 let D, STORES = [];
-const state = { prog: "all", bu: "", lob: "", tsh: "", q: "", store: "", pick: "", lvl: 1, open: new Set(), sortKey: "name", sortDir: "asc", brk: "bu", bSort: "achv_all", bDir: "desc" };
+const state = { mClosed: new Set(), prog: "all", bu: "", lob: "", tsh: "", q: "", store: "", pick: "", lvl: 1, open: new Set(), sortKey: "name", sortDir: "asc", brk: "bu", bSort: "achv_all", bDir: "desc" };
 
 fetch("data/summit.json", { cache: "no-store" })
   .then((r) => r.json())
@@ -345,15 +345,15 @@ function prep(j) {
     s.days[di][0] += +qa; s.days[di][1] += +qA; s.mtd.all += +qa; s.mtd.a += +qA;
   });
   split(j.est).forEach(([site, ea, eA]) => { const s = map.get(site); if (s) { s.est.all = +ea; s.est.a = +eA; } });
-  split(j.mix).forEach(([site, cat, model, mtd, tod, stk, est]) => {
+  split(j.mix).forEach(([site, cat, model, variant, mtd, tod, stk, est]) => {
     const s = map.get(site); if (!s) return;
-    s.models.push({ cat, model, mtd: +mtd, today: +tod, stock: +stk, est: +(est || 0) });
+    s.models.push({ cat, model, variant: variant || model, mtd: +mtd, today: +tod, stock: +stk, est: +(est || 0) });
     s.today.all += +tod; s.stock.all += +stk;
     if (cat === "A") { s.today.a += +tod; s.stock.a += +stk; }
   });
   split(j.today_any).forEach(([site, n]) => { const s = map.get(site); if (s) s.orders = +n; });
   const dcName = new Map(split(j.dcs).map(([site, name, bu]) => [site, { name, bu }]));
-  const dcStock = split(j.dc_stock).map(([site, cat, model, q]) => ({ site, cat, model, q: +q, ...(dcName.get(site) || { name: site, bu: "" }) }));
+  const dcStock = split(j.dc_stock).map(([site, cat, model, variant, q]) => ({ site, cat, model, variant: variant || model, q: +q, ...(dcName.get(site) || { name: site, bu: "" }) }));
   return { j, start, end, totalDays, doneDays, remDays, hasToday, dcStock };
 }
 
@@ -837,24 +837,34 @@ function renderBreakdown(rows) {
   t.tFoot.innerHTML = `<tr><td class="l">TOTAL</td>${keys.length > 1 ? "<td></td>" : ""}${cells(tot)}</tr>`;
 }
 
-// ---------- stock analysis by model ----------
+// ---------- stock analysis: Detail_Cat -> Model_Type_Detail + Model_Category ----------
+const CAT_ORDER = ["A", "S", "Z", "T", "X"];
 function renderModels(rows) {
   const t = document.getElementById("modelTable"), k = state.prog, P = PROG[k];
   const ok = (cat) => k === "all" || cat === "A";
-  const pools = dcPools(rows);
-  const by = new Map();
-  const get = (model, cat) => by.get(model) || by.set(model, { model, cat, mtd: 0, today: 0, stock: 0, est: 0, dc: 0, withStock: 0, selling: 0, zeroSelling: 0 }).get(model);
-  rows.forEach((s) => s.models.forEach((x) => {
-    if (!ok(x.cat)) return;
-    const o = get(x.model, x.cat);
-    o.mtd += x.mtd; o.today += x.today; o.stock += x.stock; o.est += x.est;
-    if (x.stock > 0) o.withStock++;
-  }));
-  // stores that sold the model MTD but now hold zero stock of it
-  rows.forEach((s) => { const have = new Map(s.models.map((x) => [x.model, x])); by.forEach((o) => { const x = have.get(o.model); if (x && x.mtd > 0) { o.selling++; if (x.stock <= 0) o.zeroSelling++; } }); });
-  D.dcStock.forEach((r) => { if (ok(r.cat) && pools.has(r.bu)) get(r.model, r.cat).dc += r.q; });
-  const list = [...by.values()].filter((o) => o.mtd || o.today || o.stock || o.dc).sort((a, b) => (b.mtd + b.today) - (a.mtd + a.today) || b.stock - a.stock);
-  const n = rows.length, tot = list.reduce((a, o) => ({ mtd: a.mtd + o.mtd, today: a.today + o.today, stock: a.stock + o.stock, est: a.est + o.est, dc: a.dc + o.dc }), { mtd: 0, today: 0, stock: 0, est: 0, dc: 0 });
+  const pools = dcPools(rows), n = rows.length;
+  const blank = () => ({ mtd: 0, today: 0, stock: 0, est: 0, dc: 0, withStock: 0, selling: 0, zeroSelling: 0 });
+  const cats = new Map();            // cat -> { ...totals, vars: Map(variant -> totals) }
+  const catOf = (c) => cats.get(c) || cats.set(c, { cat: c, ...blank(), vars: new Map() }).get(c);
+  const varOf = (c, v) => { const g = catOf(c); return g.vars.get(v) || g.vars.set(v, { variant: v, ...blank() }).get(v); };
+  rows.forEach((s) => {
+    const perCat = new Map(), perVar = new Map();
+    s.models.forEach((x) => {
+      if (!ok(x.cat)) return;
+      const o = varOf(x.cat, x.variant), g = catOf(x.cat);
+      for (const f of ["mtd", "today", "stock", "est"]) { o[f] += x[f]; g[f] += x[f]; }
+      const pv = perVar.get(x.cat + "|" + x.variant) || { mtd: 0, stock: 0 }; pv.mtd += x.mtd; pv.stock += x.stock; perVar.set(x.cat + "|" + x.variant, pv);
+      const pc = perCat.get(x.cat) || { mtd: 0, stock: 0 }; pc.mtd += x.mtd; pc.stock += x.stock; perCat.set(x.cat, pc);
+    });
+    // store counts: holds stock / sold this month / sold this month but holds none now
+    perVar.forEach((v, key) => { const [c, vr] = [key.slice(0, key.indexOf("|")), key.slice(key.indexOf("|") + 1)], o = varOf(c, vr);
+      if (v.stock > 0) o.withStock++; if (v.mtd > 0) { o.selling++; if (v.stock <= 0) o.zeroSelling++; } });
+    perCat.forEach((v, c) => { const g = catOf(c);
+      if (v.stock > 0) g.withStock++; if (v.mtd > 0) { g.selling++; if (v.stock <= 0) g.zeroSelling++; } });
+  });
+  D.dcStock.forEach((r) => { if (ok(r.cat) && pools.has(r.bu)) { varOf(r.cat, r.variant).dc += r.q; catOf(r.cat).dc += r.q; } });
+  const tot = { ...blank() };
+  cats.forEach((g) => { for (const f of ["mtd", "today", "stock", "est", "dc"]) tot[f] += g[f]; });
   const days = (c) => c == null || !isFinite(c) ? "—" : Math.floor(c) + "d";
   const health = (o) => {
     const c = coverOf(o.stock, o.est);
@@ -864,20 +874,32 @@ function renderModels(rows) {
     if (c > 60) return `<span class="status s-none"><i class="dot"></i>Overstock (&gt;60d)</span>`;
     return `<span class="status s-good"><i class="dot"></i>OK</span>`;
   };
-  document.getElementById("stockNote").innerHTML = `${P} · ${n} stores in view · store stock on ${D.j.stock_date} · DC = ${[...pools].map((p) => p === "3NASA" ? "NASA DCs" : "Erafone DCs").join(" + ")}. ` +
-    `Cover = (stock ÷ month-end estimate qty) × 30.42. "Sold, now 0 stock" = stores that sold the model this month but hold none now.`;
-  t.tHead.innerHTML = `<tr><th class="l">Model</th><th class="l">Series</th><th class="bl">MTD</th><th>Today</th><th>Est. month</th><th>Share</th>
-    <th class="bl">Store stock</th><th>Cover</th><th>DC stock</th><th>Cover incl. DC</th><th class="bl">Stores with stock</th><th>Sold, now 0 stock</th><th class="l bl">Stock health</th></tr>`;
-  t.tBodies[0].innerHTML = list.map((o) => {
-    return `<tr><td class="l"><b>${esc(o.model)}</b></td><td class="l muted">${CAT[o.cat] || o.cat}</td>
-      <td class="bl">${fmt(o.mtd)}</td><td class="${o.today ? "" : "muted"}">${D.hasToday ? fmt(o.today) : "—"}</td><td>${fmt(o.est)}</td><td>${pct(tot.mtd ? o.mtd / tot.mtd : null)}</td>
-      <td class="bl">${fmt(o.stock)}</td><td>${coverHtml(coverOf(o.stock, o.est))}</td>
-      <td>${fmt(o.dc)}</td><td>${days(coverOf(o.stock + o.dc, o.est))}</td>
+  const cells = (o) => `<td class="bl">${fmt(o.mtd)}</td><td class="${o.today ? "" : "muted"}">${D.hasToday ? fmt(o.today) : "—"}</td><td>${fmt(o.est)}</td><td>${pct(tot.mtd ? o.mtd / tot.mtd : null)}</td>
+      <td class="bl">${fmt(o.stock)}</td><td>${coverHtml(coverOf(o.stock, o.est))}</td><td>${fmt(o.dc)}</td><td>${days(coverOf(o.stock + o.dc, o.est))}</td>
       <td class="bl">${fmt(o.withStock)}<span class="muted">/${n}</span></td>
       <td class="${o.zeroSelling ? "s-crit" : "muted"}">${o.zeroSelling ? fmt(o.zeroSelling) + " of " + fmt(o.selling) : "0"}</td>
-      <td class="l bl">${health(o)}</td></tr>`;
-  }).join("") || `<tr><td class="l" colspan="13">No models for this filter.</td></tr>`;
-  t.tFoot.innerHTML = `<tr><td class="l">Total · ${list.length} models</td><td></td><td class="bl">${fmt(tot.mtd)}</td><td>${D.hasToday ? fmt(tot.today) : "—"}</td><td>${fmt(tot.est)}</td><td>100%</td>
+      <td class="l bl">${health(o)}</td>`;
+  const byVol = (a, b) => (b.mtd + b.today) - (a.mtd + a.today) || b.stock - a.stock;
+  const list = [...cats.values()].filter((g) => g.mtd || g.today || g.stock || g.dc)
+    .sort((a, b) => byVol(a, b) || CAT_ORDER.indexOf(a.cat) - CAT_ORDER.indexOf(b.cat));
+  const nVar = list.reduce((a, g) => a + [...g.vars.values()].filter((o) => o.mtd || o.today || o.stock || o.dc).length, 0);
+  document.getElementById("stockNote").innerHTML = `${P} · ${n} stores in view · store stock on ${D.j.stock_date} · DC = ${[...pools].map((p) => p === "3NASA" ? "NASA DCs" : "Erafone DCs").join(" + ")}. ` +
+    `Grouped by Detail_Cat, then Model_Type_Detail + Model_Category. Click a category row to open or close it. Cover = (stock ÷ month-end estimate qty) × 30.42. "Sold, now 0 stock" = stores that sold it this month but hold none now.`;
+  t.tHead.innerHTML = `<tr><th class="l">Detail_Cat / Model type detail + category</th><th class="bl">MTD</th><th>Today</th><th>Est. month</th><th>Share</th>
+    <th class="bl">Store stock</th><th>Cover</th><th>DC stock</th><th>Cover incl. DC</th><th class="bl">Stores with stock</th><th>Sold, now 0 stock</th><th class="l bl">Stock health</th></tr>`;
+  let html = "";
+  list.forEach((g) => {
+    const open = !state.mClosed.has(g.cat);
+    html += `<tr class="g0" data-cat="${g.cat}"><td class="l"><span class="caret">${open ? "▼" : "▶"}</span>${esc((CAT[g.cat] || g.cat).toUpperCase())} <span class="muted" style="font-weight:400">· ${g.vars.size} variants</span></td>${cells(g)}</tr>`;
+    if (!open) return;
+    [...g.vars.values()].filter((o) => o.mtd || o.today || o.stock || o.dc).sort(byVol).forEach((o) => {
+      html += `<tr><td class="l" style="padding-left:30px">${esc(o.variant)}</td>${cells(o)}</tr>`;
+    });
+  });
+  t.tBodies[0].innerHTML = html || `<tr><td class="l" colspan="12">No models for this filter.</td></tr>`;
+  t.tBodies[0].onclick = (e) => { const tr = e.target.closest("tr[data-cat]"); if (!tr) return;
+    state.mClosed.has(tr.dataset.cat) ? state.mClosed.delete(tr.dataset.cat) : state.mClosed.add(tr.dataset.cat); renderModels(filtered()); };
+  t.tFoot.innerHTML = `<tr><td class="l">Total · ${nVar} variants</td><td class="bl">${fmt(tot.mtd)}</td><td>${D.hasToday ? fmt(tot.today) : "—"}</td><td>${fmt(tot.est)}</td><td>100%</td>
     <td class="bl">${fmt(tot.stock)}</td><td>${days(coverOf(tot.stock, tot.est))}</td><td>${fmt(tot.dc)}</td><td>${days(coverOf(tot.stock + tot.dc, tot.est))}</td><td class="bl"></td><td></td><td class="bl"></td></tr>`;
 }
 
