@@ -3,7 +3,8 @@
 -- Summit has two targets per store:
 --   Summit Device : master_data.target_summit_november.target_qty   = all SAMSUNG Device qty
 --   A Series      : master_data.target_aseries_samsung.target_Aseries = SAMSUNG Device, Detail_Cat = 'A SERIES' qty
--- Store list = every store in the two target files. Store attributes come from sales_b2c.master_store_r5.
+--   Racing        : master_data.target_racing_samsung, 5 tiers per store = SAMSUNG Device, Detail_Cat in S SERIES / Z SERIES qty
+-- Store list = every store in the three target files (site codes are TRIMmed: the Racing file has ' F285'). Store attributes come from sales_b2c.master_store_r5.
 -- Edit the period here (the target month/year is taken from the start date):
 WITH p AS (SELECT DATE '2026-11-01' AS s, DATE '2026-11-30' AS e),
 
@@ -19,9 +20,20 @@ t_a AS (
   WHERE year = EXTRACT(YEAR FROM p.s) AND month = EXTRACT(MONTH FROM p.s)
   GROUP BY 1
 ),
+t_r AS (
+  SELECT TRIM(site_code) AS site,
+         SUM(IF(tier = 1, target, 0)) AS r1, SUM(IF(tier = 2, target, 0)) AS r2, SUM(IF(tier = 3, target, 0)) AS r3,
+         SUM(IF(tier = 4, target, 0)) AS r4, SUM(IF(tier = 5, target, 0)) AS r5
+  FROM `e-smart-433113.master_data.target_racing_samsung`, p
+  WHERE year = EXTRACT(YEAR FROM p.s) AND month = EXTRACT(MONTH FROM p.s)
+  GROUP BY 1
+),
 tgt AS (
-  SELECT site, IFNULL(td, 0) AS td, IFNULL(ta, 0) AS ta
-  FROM t_sum FULL JOIN t_a USING (site)
+  SELECT site, IFNULL(td, 0) AS td, IFNULL(ta, 0) AS ta,
+         -- in-file flags: 1 = store is in that target file (a store can be in Racing only, or have 0 targets)
+         IF(t_sum.site IS NULL, 0, 1) AS in_s, IF(t_a.site IS NULL, 0, 1) AS in_a, IF(t_r.site IS NULL, 0, 1) AS in_r,
+         IFNULL(r1, 0) AS r1, IFNULL(r2, 0) AS r2, IFNULL(r3, 0) AS r3, IFNULL(r4, 0) AS r4, IFNULL(r5, 0) AS r5
+  FROM t_sum FULL JOIN t_a USING (site) FULL JOIN t_r USING (site)
 ),
 ms AS (
   SELECT TRIM(site_code) AS site, Store_Name AS name, BU_CATEGORY AS bu, LOB AS lob, TSH AS tsh, CHANNEL AS ch
@@ -54,12 +66,12 @@ sales AS (
 ),
 -- daily units per store: all Samsung Device, and A Series
 daily AS (
-  SELECT d, site, SUM(q) AS q_all, SUM(IF(cat = 'A', q, 0)) AS q_a
+  SELECT d, site, SUM(q) AS q_all, SUM(IF(cat = 'A', q, 0)) AS q_a, SUM(IF(cat IN ('S', 'Z'), q, 0)) AS q_r
   FROM sales GROUP BY d, site
 ),
 -- month estimate per store = SUM(SUM_month_est_quantity) from sales_vs_stock
 est AS (
-  SELECT site, SUM(est) AS e_all, SUM(IF(cat = 'A', est, 0)) AS e_a
+  SELECT site, SUM(est) AS e_all, SUM(IF(cat = 'A', est, 0)) AS e_a, SUM(IF(cat IN ('S', 'Z'), est, 0)) AS e_r
   FROM sales GROUP BY site
 ),
 stk AS (
@@ -125,15 +137,17 @@ SELECT TO_JSON_STRING(STRUCT(
   (SELECT CAST(today_date AS STRING) FROM today_meta) AS today_date,
   (SELECT today_last_time FROM today_meta) AS today_last_time,
   CAST(CURRENT_DATETIME('Asia/Jakarta') AS STRING) AS refreshed_at,
-  -- site|store name|business unit|LOB|TSH|channel|target Summit Device|target A Series
+  -- site|store name|business unit|LOB|TSH|channel|target Summit Device|target A Series|Racing tier 1..5|in Summit|in A Series|in Racing
   ARRAY(SELECT CONCAT(t.site, '|', IFNULL(m.name, ''), '|', IFNULL(m.bu, ''), '|', IFNULL(m.lob, ''), '|', IFNULL(m.tsh, ''), '|',
-                      IFNULL(m.ch, ''), '|', CAST(t.td AS STRING), '|', CAST(t.ta AS STRING))
+                      IFNULL(m.ch, ''), '|', CAST(t.td AS STRING), '|', CAST(t.ta AS STRING), '|',
+                      CAST(t.r1 AS STRING), '|', CAST(t.r2 AS STRING), '|', CAST(t.r3 AS STRING), '|', CAST(t.r4 AS STRING), '|', CAST(t.r5 AS STRING), '|',
+                      CAST(t.in_s AS STRING), '|', CAST(t.in_a AS STRING), '|', CAST(t.in_r AS STRING))
         FROM tgt t LEFT JOIN ms m USING (site) ORDER BY t.site) AS targets,
-  -- yyyymmdd|site|units all Samsung Device|units A Series   (completed days, sales_vs_stock)
-  ARRAY(SELECT CONCAT(FORMAT_DATE('%Y%m%d', d), '|', site, '|', CAST(q_all AS STRING), '|', CAST(q_a AS STRING))
-        FROM daily WHERE q_all <> 0 OR q_a <> 0 ORDER BY d, site) AS daily,
-  -- site|month est all Device|month est A Series   (SUM_month_est_quantity)
-  ARRAY(SELECT CONCAT(site, '|', CAST(ROUND(e_all, 1) AS STRING), '|', CAST(ROUND(e_a, 1) AS STRING)) FROM est ORDER BY site) AS est,
+  -- yyyymmdd|site|units all Samsung Device|units A Series|units S+Z (Racing)   (completed days, sales_vs_stock)
+  ARRAY(SELECT CONCAT(FORMAT_DATE('%Y%m%d', d), '|', site, '|', CAST(q_all AS STRING), '|', CAST(q_a AS STRING), '|', CAST(q_r AS STRING))
+        FROM daily WHERE q_all <> 0 OR q_a <> 0 OR q_r <> 0 ORDER BY d, site) AS daily,
+  -- site|month est all Device|month est A Series|month est S+Z   (SUM_month_est_quantity)
+  ARRAY(SELECT CONCAT(site, '|', CAST(ROUND(e_all, 1) AS STRING), '|', CAST(ROUND(e_a, 1) AS STRING), '|', CAST(ROUND(e_r, 1) AS STRING)) FROM est ORDER BY site) AS est,
   -- site|cat|model|variant|MTD units|today units|store stock|month est units   (cat: A=A Series, S, Z, T=Tablet, X=other)
   ARRAY(SELECT CONCAT(site, '|', cat, '|', model, '|', variant, '|', CAST(mtd AS STRING), '|', CAST(tod AS STRING), '|', CAST(stock AS STRING), '|', CAST(ROUND(est, 1) AS STRING))
         FROM mix WHERE mtd <> 0 OR tod <> 0 OR stock <> 0 ORDER BY site, cat, model, variant) AS mix,
