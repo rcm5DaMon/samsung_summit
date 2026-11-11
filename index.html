@@ -267,8 +267,17 @@
   <section class="card table-card">
     <div class="table-head">
       <div>
-        <h2>Stock analysis · by Detail_Cat and model</h2>
+        <h2>Stock analysis · Detail_Cat → model → store</h2>
         <p class="note" style="margin:0" id="stockNote"></p>
+      </div>
+      <div class="lvlbtns" data-noshot>
+        <button type="button" class="btn-ghost" id="stockCsv" title="Download every store × variant row in the current filter as CSV (opens in Excel)">⬇ Store stock CSV</button>
+        Show down to
+        <span class="seg" role="group" aria-label="Stock level">
+          <button type="button" data-mlvl="0" aria-pressed="false">Detail_Cat</button>
+          <button type="button" data-mlvl="1" aria-pressed="true">Model</button>
+          <button type="button" data-mlvl="2" aria-pressed="false">Store</button>
+        </span>
       </div>
     </div>
     <div class="tscroll" style="max-height:none">
@@ -306,7 +315,7 @@ const pct = (n) => (n == null || !isFinite(n)) ? "—" : Math.round(n * 100) + "
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const parseDate = (s) => new Date(s + "T00:00:00");
 const dayMs = 86400000;
-const shortName = (n) => n.replace(/^ERAFONE\s+(&\s+MORE\s+)?/, "").replace(/^SAMSUNG\s+(STORE\s+)?/, "SES ");
+const shortName = (n) => n.replace(/^ERAFONE\s+((&|AND)\s+MORE\s+)?/, "").replace(/^SAMSUNG\s+(STORE\s+)?/, "SES ");
 const twoWords = (n) => n.split(" ").slice(0, 2).join(" ");
 // Cover (days) = (stock / month-end estimate qty) x 30.42 average days per month
 const DAYS_PER_MONTH = 30.42;
@@ -315,7 +324,7 @@ const CH_SHORT = { "SAMSUNG STORE": "SES", "ERAFONE & MORE": "E&M", "ERAFONE": "
 const chShort = (c) => CH_SHORT[c] || c;
 
 let D, STORES = [];
-const state = { mClosed: new Set(), prog: "all", bu: "", lob: "", tsh: "", q: "", store: "", pick: "", lvl: 1, open: new Set(), sortKey: "name", sortDir: "asc", brk: "bu", bSort: "achv_all", bDir: "desc" };
+const state = { mClosed: new Set(), mOpenVar: new Set(), prog: "all", bu: "", lob: "", tsh: "", q: "", store: "", pick: "", lvl: 1, open: new Set(), sortKey: "name", sortDir: "asc", brk: "bu", bSort: "achv_all", bDir: "desc" };
 
 fetch("data/summit.json", { cache: "no-store" })
   .then((r) => r.json())
@@ -415,6 +424,15 @@ function initUi() {
   document.querySelectorAll("[data-lvl]").forEach((b) => b.onclick = () => { setLevel(+b.dataset.lvl); renderReview(filtered()); });
   fillSelects();
   setLevel(1);
+  document.querySelectorAll("[data-mlvl]").forEach((b) => b.onclick = () => {
+    const l = +b.dataset.mlvl;
+    document.querySelectorAll("[data-mlvl]").forEach((x) => x.setAttribute("aria-pressed", x === b));
+    state.mClosed = new Set(l === 0 ? CAT_ORDER : []);
+    state.mOpenVar = new Set();
+    if (l === 2) STORES.forEach((s) => s.models.forEach((x) => state.mOpenVar.add(x.cat + "|" + x.variant)));
+    renderModels(filtered());
+  });
+  document.getElementById("stockCsv").onclick = () => stockCsv(filtered());
   document.querySelectorAll("[data-brk]").forEach((b) => b.onclick = () => {
     state.brk = b.dataset.brk;
     document.querySelectorAll("[data-brk]").forEach((x) => x.setAttribute("aria-pressed", x === b));
@@ -853,12 +871,13 @@ function renderModels(rows) {
       if (!ok(x.cat)) return;
       const o = varOf(x.cat, x.variant), g = catOf(x.cat);
       for (const f of ["mtd", "today", "stock", "est"]) { o[f] += x[f]; g[f] += x[f]; }
-      const pv = perVar.get(x.cat + "|" + x.variant) || { mtd: 0, stock: 0 }; pv.mtd += x.mtd; pv.stock += x.stock; perVar.set(x.cat + "|" + x.variant, pv);
+      const pv = perVar.get(x.cat + "|" + x.variant) || { mtd: 0, stock: 0, today: 0, est: 0 }; pv.mtd += x.mtd; pv.stock += x.stock; pv.today += x.today; pv.est += x.est; perVar.set(x.cat + "|" + x.variant, pv);
       const pc = perCat.get(x.cat) || { mtd: 0, stock: 0 }; pc.mtd += x.mtd; pc.stock += x.stock; perCat.set(x.cat, pc);
     });
     // store counts: holds stock / sold this month / sold this month but holds none now
     perVar.forEach((v, key) => { const [c, vr] = [key.slice(0, key.indexOf("|")), key.slice(key.indexOf("|") + 1)], o = varOf(c, vr);
-      if (v.stock > 0) o.withStock++; if (v.mtd > 0) { o.selling++; if (v.stock <= 0) o.zeroSelling++; } });
+      if (v.stock > 0) o.withStock++; if (v.mtd > 0) { o.selling++; if (v.stock <= 0) o.zeroSelling++; }
+      (o.stores || (o.stores = [])).push({ s, ...v }); });
     perCat.forEach((v, c) => { const g = catOf(c);
       if (v.stock > 0) g.withStock++; if (v.mtd > 0) { g.selling++; if (v.stock <= 0) g.zeroSelling++; } });
   });
@@ -884,8 +903,8 @@ function renderModels(rows) {
     .sort((a, b) => byVol(a, b) || CAT_ORDER.indexOf(a.cat) - CAT_ORDER.indexOf(b.cat));
   const nVar = list.reduce((a, g) => a + [...g.vars.values()].filter((o) => o.mtd || o.today || o.stock || o.dc).length, 0);
   document.getElementById("stockNote").innerHTML = `${P} · ${n} stores in view · store stock on ${D.j.stock_date} · DC = ${[...pools].map((p) => p === "3NASA" ? "NASA DCs" : "Erafone DCs").join(" + ")}. ` +
-    `Grouped by Detail_Cat, then Model_Type_Detail + Model_Category. Click a category row to open or close it. Cover = (stock ÷ month-end estimate qty) × 30.42. "Sold, now 0 stock" = stores that sold it this month but hold none now.`;
-  t.tHead.innerHTML = `<tr><th class="l">Detail_Cat / Model type detail + category</th><th class="bl">MTD</th><th>Today</th><th>Est. month</th><th>Share</th>
+    `Grouped by Detail_Cat, then Model_Type_Detail + Model_Category, then store. Click a category or model row to open or close it; stores are listed most urgent first (sold but out of stock, then lowest cover). Cover = (stock ÷ month-end estimate qty) × 30.42. "Sold, now 0 stock" = stores that sold it this month but hold none now.`;
+  t.tHead.innerHTML = `<tr><th class="l">Detail_Cat / Model type detail + category / Store</th><th class="bl">MTD</th><th>Today</th><th>Est. month</th><th>Share</th>
     <th class="bl">Store stock</th><th>Cover</th><th>DC stock</th><th>Cover incl. DC</th><th class="bl">Stores with stock</th><th>Sold, now 0 stock</th><th class="l bl">Stock health</th></tr>`;
   let html = "";
   list.forEach((g) => {
@@ -893,14 +912,59 @@ function renderModels(rows) {
     html += `<tr class="g0" data-cat="${g.cat}"><td class="l"><span class="caret">${open ? "▼" : "▶"}</span>${esc((CAT[g.cat] || g.cat).toUpperCase())} <span class="muted" style="font-weight:400">· ${g.vars.size} variants</span></td>${cells(g)}</tr>`;
     if (!open) return;
     [...g.vars.values()].filter((o) => o.mtd || o.today || o.stock || o.dc).sort(byVol).forEach((o) => {
-      html += `<tr><td class="l" style="padding-left:30px">${esc(o.variant)}</td>${cells(o)}</tr>`;
+      const vk = g.cat + "|" + o.variant, vOpen = state.mOpenVar.has(vk), ns = (o.stores || []).length;
+      html += `<tr class="${ns ? "g2" : ""}" data-var="${esc(vk)}" style="${ns ? "cursor:pointer" : ""}"><td class="l" style="padding-left:24px">${ns ? `<span class="caret">${vOpen ? "▼" : "▶"}</span>` : `<span class="caret"></span>`}${esc(o.variant)} <span class="muted" style="font-weight:400">· ${ns} stores</span></td>${cells(o)}</tr>`;
+      if (!vOpen) return;
+      storeSort(o.stores).forEach((r) => html += storeStockRow(r, tot));
     });
   });
   t.tBodies[0].innerHTML = html || `<tr><td class="l" colspan="12">No models for this filter.</td></tr>`;
-  t.tBodies[0].onclick = (e) => { const tr = e.target.closest("tr[data-cat]"); if (!tr) return;
-    state.mClosed.has(tr.dataset.cat) ? state.mClosed.delete(tr.dataset.cat) : state.mClosed.add(tr.dataset.cat); renderModels(filtered()); };
+  t.tBodies[0].onclick = (e) => {
+    const tr = e.target.closest("tr"); if (!tr) return;
+    if (tr.dataset.cat) { state.mClosed.has(tr.dataset.cat) ? state.mClosed.delete(tr.dataset.cat) : state.mClosed.add(tr.dataset.cat); renderModels(filtered()); }
+    else if (tr.dataset.var) { state.mOpenVar.has(tr.dataset.var) ? state.mOpenVar.delete(tr.dataset.var) : state.mOpenVar.add(tr.dataset.var); renderModels(filtered()); }
+    else if (tr.dataset.site) { state.store = state.store === tr.dataset.site ? "" : tr.dataset.site; render(); }
+  };
   t.tFoot.innerHTML = `<tr><td class="l">Total · ${nVar} variants</td><td class="bl">${fmt(tot.mtd)}</td><td>${D.hasToday ? fmt(tot.today) : "—"}</td><td>${fmt(tot.est)}</td><td>100%</td>
     <td class="bl">${fmt(tot.stock)}</td><td>${days(coverOf(tot.stock, tot.est))}</td><td>${fmt(tot.dc)}</td><td>${days(coverOf(tot.stock + tot.dc, tot.est))}</td><td class="bl"></td><td></td><td class="bl"></td></tr>`;
+}
+
+// store rows under a variant: sold-but-empty first, then lowest cover, then most stock
+function storeSort(list) {
+  const rank = (r) => r.mtd > 0 && r.stock <= 0 ? -1 : (() => { const c = coverOf(r.stock, r.est); return c == null ? 1e7 : isFinite(c) ? c : 1e6; })();
+  return [...list].sort((a, b) => rank(a) - rank(b) || b.stock - a.stock || a.s.site.localeCompare(b.s.site));
+}
+function storeStockRow(r, tot) {
+  const s = r.s, c = coverOf(r.stock, r.est), out = r.mtd > 0 && r.stock <= 0;
+  const hl = !(r.est > 0) ? (r.stock ? `<span class="status s-none"><i class="dot"></i>No sales MTD</span>` : "—")
+    : c < 7 ? `<span class="status s-crit"><i class="dot"></i>Low · refill</span>` : c < D.remDays ? `<span class="status s-warn"><i class="dot"></i>Runs out before month-end</span>`
+    : c > 60 ? `<span class="status s-none"><i class="dot"></i>Overstock (&gt;60d)</span>` : `<span class="status s-good"><i class="dot"></i>OK</span>`;
+  return `<tr class="st ${state.store === s.site ? "sel" : ""}" data-site="${s.site}" title="${esc(s.name)} · ${esc(s.tsh)} · click to focus the page on this store">
+    <td class="l name" style="padding-left:52px"><span class="site">${s.site}</span>${esc(shortName(s.name))}</td>
+    <td class="bl">${fmt(r.mtd)}</td><td class="${r.today ? "" : "muted"}">${D.hasToday ? fmt(r.today) : "—"}</td><td>${fmt(r.est)}</td><td class="muted"></td>
+    <td class="bl"><b>${fmt(r.stock)}</b></td><td>${coverHtml(c)}</td><td class="muted"></td><td class="muted"></td>
+    <td class="bl l muted" style="text-align:right">${esc(twoWords(s.tsh))}</td>
+    <td>${out ? `<span class="status s-crit"><i class="dot"></i>Out of stock</span>` : ""}</td>
+    <td class="l bl">${hl}</td></tr>`;
+}
+// CSV export: every store x variant row in the current filter
+function stockCsv(rows) {
+  const k = state.prog, ok = (cat) => k === "all" || cat === "A";
+  const head = ["Site", "Store", "Business unit", "LOB", "TSH", "Channel", "Detail_Cat", "Model_Type", "Model type detail + category",
+                "MTD qty", "Today qty", "Month est qty", "Store stock", "Cover days", "Sold but 0 stock"];
+  const q = (v) => /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v;
+  const lines = [head.join(",")];
+  rows.forEach((s) => s.models.filter((x) => ok(x.cat)).forEach((x) => {
+    const c = coverOf(x.stock, x.est);
+    lines.push([s.site, s.name, s.bu, s.lob, s.tsh, s.ch, CAT[x.cat] || x.cat, x.model, x.variant, x.mtd, x.today, x.est, x.stock,
+      c == null ? "" : isFinite(c) ? c.toFixed(1) : "no sales", x.mtd > 0 && x.stock <= 0 ? "YES" : ""].map(q).join(","));
+  }));
+  const blob = new Blob(["\ufeff" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a"), now = new Date(), p = (n) => String(n).padStart(2, "0");
+  a.href = URL.createObjectURL(blob);
+  a.download = `Summit_store_stock_${PROG[k].replace(" ", "_")}_${D.j.stock_date}_${now.getFullYear()}${p(now.getMonth() + 1)}${p(now.getDate())}.csv`;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  toast(`Downloaded ${lines.length - 1} store × model rows`);
 }
 
 function renderDc(rows) {

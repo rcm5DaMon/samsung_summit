@@ -54,7 +54,9 @@ You can refresh many times a day.
 - **Review table:** LOB → TSH → Store, collapsible. The "Show down to" buttons set the level. Click a store to focus the whole page on it.
 - **Stock analysis:** grouped by Detail_Cat (A / S / Z Series, Tablet), broken down by Model_Type_Detail + Model_Category
   (e.g. "A57 5G 8/256 GB"). Shows MTD, today, month estimate, store stock, days of cover, DC stock, stores that sold it but now
-  hold none, and stock health. Click a category row to open or close it.
+  hold none, and stock health. Click a category or model row to open it; under each model every store that sold or holds it
+  is listed (out-of-stock first, then lowest cover). "Show down to: Store" opens everything, and **⬇ Store stock CSV**
+  downloads every store × model row in the current filter for Excel.
 - **DC stock:** Erafone DCs (serve Multibrand, Channel Store and Joint Business stores) and NASA DCs (serve Samsung stores).
 - **Save PNG / Copy image** for WhatsApp.
 
