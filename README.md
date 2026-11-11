@@ -38,7 +38,7 @@ You can refresh many times a day.
   then run the workflow.
 
 ## What's on the page
-- **Target switch:** Summit Device, A Series or Racing (S+Z Series tiers). **Filters:** Business unit → LOB → TSH (cascading) and store search.
+- **Target switch:** Summit Device, A Series or Racing (S+Z Series tiers). **Filters:** Business unit → LOB → TSH → Store (cascading) and store search.
 - **KPI cards:**
   - Achievement for both targets: MTD, estimate, and incl. today.
   - Stores on track (MTD and estimate).
@@ -57,7 +57,6 @@ You can refresh many times a day.
   hold none, and stock health. Click a category or model row to open it; under each model every store that sold or holds it
   is listed (out-of-stock first, then lowest cover). "Show down to: Store" opens everything, and **⬇ Store stock CSV**
   downloads every store × model row in the current filter for Excel.
-- **DC stock:** Erafone DCs (serve Multibrand, Channel Store and Joint Business stores) and NASA DCs (serve Samsung stores).
 - **Save PNG / Copy image** for WhatsApp.
 
 ## Definitions

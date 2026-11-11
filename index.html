@@ -86,7 +86,8 @@
   .filters label { font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
   select, input[type=search] { font: inherit; font-size: 13px; color: var(--text-primary); background: var(--surface-0);
          border: 1px solid var(--border); border-radius: 8px; padding: 5px 8px; }
-  input[type=search] { min-width: 180px; }
+  input[type=search] { min-width: 150px; width: 170px; }
+  #fBu { max-width: 160px; } #fLob { max-width: 170px; } #fTsh { max-width: 190px; } #fStore { max-width: 260px !important; }
   .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
   .seg button { font: inherit; font-size: 13px; background: var(--surface-0); color: var(--text-secondary); border: 0;
                 padding: 5px 12px; cursor: pointer; }
@@ -218,6 +219,7 @@
     <label>Business unit <select id="fBu"></select></label>
     <label>LOB <select id="fLob"></select></label>
     <label>TSH <select id="fTsh"></select></label>
+    <label>Store <select id="fStore" style="max-width:300px"></select></label>
     <button type="button" id="fClear" class="clear" hidden>✕ Clear filters</button>
     <span class="spacer"></span>
     <input type="search" id="fSearch" placeholder="Search store or site code…" aria-label="Search store">
@@ -301,18 +303,6 @@
     </div>
     <div class="tscroll" style="max-height:none">
       <table id="modelTable"><thead></thead><tbody></tbody><tfoot></tfoot></table>
-    </div>
-  </section>
-
-  <section class="card table-card">
-    <div class="table-head">
-      <div>
-        <h2>DC stock · Samsung Device</h2>
-        <p class="note" style="margin:0" id="dcNote"></p>
-      </div>
-    </div>
-    <div class="tscroll" style="max-height:none">
-      <table id="dcTable"><thead></thead><tbody></tbody><tfoot></tfoot></table>
     </div>
   </section>
 
@@ -457,6 +447,7 @@ function initUi() {
   document.getElementById("fBu").onchange = onSel("bu");
   document.getElementById("fLob").onchange = onSel("lob");
   document.getElementById("fTsh").onchange = onSel("tsh");
+  document.getElementById("fStore").onchange = (e) => { state.store = e.target.value; state.pick = ""; render(); };
   document.getElementById("fSearch").oninput = (e) => { state.q = e.target.value.trim().toLowerCase(); render(); };
   document.getElementById("fClear").onclick = () => {
     Object.assign(state, { bu: "", lob: "", tsh: "", q: "", store: "", pick: "" });
@@ -532,6 +523,14 @@ function fillSelects() {
   opts(document.getElementById("fLob"), "LOB", uniq(s1.map((s) => s.lob)), state.lob);
   const s2 = s1.filter((s) => !state.lob || s.lob === state.lob);
   opts(document.getElementById("fTsh"), "TSH", uniq(s2.map((s) => s.tsh)), state.tsh);
+  // Store list: stores in the current target's file, within BU / LOB / TSH, grouped by TSH
+  const s3 = s2.filter((s) => (!state.tsh || s.tsh === state.tsh) && s.inProg[state.prog])
+    .sort((a, b) => a.tsh.localeCompare(b.tsh) || a.site.localeCompare(b.site));
+  if (state.store && !s3.some((s) => s.site === state.store)) state.store = "";
+  const groups = new Map();
+  s3.forEach((s) => (groups.get(s.tsh) || groups.set(s.tsh, []).get(s.tsh)).push(s));
+  document.getElementById("fStore").innerHTML = `<option value="">All stores (${s3.length})</option>` + [...groups].map(([tsh, ss]) =>
+    `<optgroup label="${esc(tsh)}">${ss.map((s) => `<option value="${s.site}"${s.site === state.store ? " selected" : ""}>${s.site} · ${esc(shortName(s.name))}</option>`).join("")}</optgroup>`).join("");
 }
 
 function setLevel(l) {
@@ -546,6 +545,7 @@ function setLevel(l) {
 
 // ---------- render ----------
 function render() {
+  fillSelects();
   const rows = filtered();
   document.getElementById("fClear").hidden = !(state.bu || state.lob || state.tsh || state.q || state.store || state.pick);
   renderKpis(scopeStores());
@@ -556,7 +556,7 @@ function render() {
   bn.style.display = parts.length ? "flex" : "none";
   bn.innerHTML = parts.length ? `Showing only ${parts.join(" · ")} <button type="button" class="clear" id="bnClear">✕ Show all</button>` : "";
   if (parts.length) document.getElementById("bnClear").onclick = () => { state.store = ""; state.pick = ""; render(); };
-  renderPace(rows); renderTsh(); renderBreakdown(rows); renderReview(rows); renderModels(rows); renderDc(rows);
+  renderPace(rows); renderTsh(); renderBreakdown(rows); renderReview(rows); renderModels(rows);
 }
 
 function statusOf(pace, hasTarget) {
@@ -1135,27 +1135,6 @@ function stockCsv(rows) {
   a.download = `Samsung_store_stock_${PROG[k].replace(/\W+/g, "_")}_${D.j.stock_date}_${now.getFullYear()}${p(now.getMonth() + 1)}${p(now.getDate())}.csv`;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   toast(`Downloaded ${lines.length - 1} store × model rows`);
-}
-
-function renderDc(rows) {
-  const t = document.getElementById("dcTable"), pools = dcPools(rows);
-  const cats = ["A", "S", "Z", "T", "X"];
-  const by = new Map();
-  D.dcStock.forEach((r) => {
-    if (!pools.has(r.bu)) return;
-    const o = by.get(r.site) || by.set(r.site, { site: r.site, name: r.name, bu: r.bu, c: {}, tot: 0, models: new Map() }).get(r.site);
-    o.c[r.cat] = (o.c[r.cat] || 0) + r.q; o.tot += r.q; o.models.set(r.model, (o.models.get(r.model) || 0) + r.q);
-  });
-  const list = [...by.values()].sort((a, b) => a.bu.localeCompare(b.bu) || b.tot - a.tot);
-  const used = cats.filter((c) => list.some((o) => o.c[c]));
-  document.getElementById("dcNote").textContent = `Stock on ${D.j.stock_date}. NASA DCs serve Samsung stores (3NASA); Erafone DCs serve Erafone, Erafone & More, Franchise, XL/Indosat and joint-business stores. Hover a row for its top models.`;
-  t.tHead.innerHTML = `<tr><th class="l">DC</th><th class="l">Serves</th>${used.map((c) => `<th class="${c === "A" ? "bl" : ""}">${CAT[c]}</th>`).join("")}<th class="bl">Total</th><th class="l">Top models</th></tr>`;
-  const top = (o) => [...o.models].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([m, q]) => `${m} ${q}`).join(" · ");
-  t.tBodies[0].innerHTML = list.map((o) => `<tr><td class="l"><span class="site">${o.site}</span>${esc(o.name)}</td><td class="l muted">${o.bu === "3NASA" ? "Samsung stores" : "Multibrand & others"}</td>
-    ${used.map((c) => `<td class="${c === "A" ? "bl" : ""} ${o.c[c] ? "" : "muted"}">${fmt(o.c[c] || 0)}</td>`).join("")}<td class="bl"><b>${fmt(o.tot)}</b></td><td class="l muted">${esc(top(o))}</td></tr>`).join("")
-    || `<tr><td class="l" colspan="9">No DC stock.</td></tr>`;
-  const sum = (c) => list.reduce((a, o) => a + (o.c[c] || 0), 0);
-  t.tFoot.innerHTML = `<tr><td class="l">Total · ${list.length} DCs</td><td></td>${used.map((c) => `<td class="${c === "A" ? "bl" : ""}">${fmt(sum(c))}</td>`).join("")}<td class="bl">${fmt(list.reduce((a, o) => a + o.tot, 0))}</td><td></td></tr>`;
 }
 
 // ===== Screenshot: render the dashboard (as filtered) to PNG without external libraries =====
