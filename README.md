@@ -77,6 +77,7 @@ You can refresh many times a day.
     stores with no S+Z sales last month are counted separately ("new").
   - **Today** = today's S+Z units from PAID POS (`sales_daily`), shown next to MTD with **MTD + today**; the tier itself stays on the
     estimate (completed days). For a store with no S+Z today, the table shows an amber 0 if it traded other products, or **No trx** if it had no transaction at all.
+  - **Tier 5 gap** = T5 − MTD. **Daily target T5 (/ day)** = gap ÷ days left incl. today — the units per day needed from now to reach Tier 5 (✓ when today's sales already meet it).
   - **Next** = the tier target to pass next; **To go** = next − estimate (units needed on top of the current pace); **Need/day** = (next − MTD) ÷ days left (incl. today).
   - Region, BU, LOB and TSH rows add up their stores' tier targets and MTD, then apply the same rule (index = summed estimate ÷ summed last month). **Stores by tier**
     counts how many stores are in each bracket (Under T1 · Tier 2 · Tier 3 · Tier 4 · Tier 5 · Above T5).

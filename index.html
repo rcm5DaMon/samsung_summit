@@ -407,12 +407,14 @@ function metrics(s, k = state.prog) {
 // Racing: current tier from the month-end ESTIMATE (SUM_month_est_quantity), the next tier to pass, and what it takes
 function tierFields(tiers, est, mtd) {
   const has = tiers.some((v) => v > 0);
-  if (!has) return { tiers, hasTier: false, zone: null, next: null, toNext: 0, needNext: 0 };
+  if (!has) return { tiers, hasTier: false, zone: null, next: null, toNext: 0, needNext: 0, toT5: 0, needT5: 0 };
   const zone = tierOf(est, tiers);
   const next = zone < 5 ? tiers[zone] : null;                     // the tier target to pass next (T1 when under T1)
   return { tiers, hasTier: true, zone, next,
     toNext: next != null ? Math.max(0, next - est) : 0,            // units needed on top of the estimate
-    needNext: next != null ? Math.max(0, next - mtd) / D.remDays : 0 };   // per day from MTD to actually reach it
+    needNext: next != null ? Math.max(0, next - mtd) / D.remDays : 0,     // per day from MTD to actually reach it
+    // daily target for Tier 5: (T5 - MTD) / days left incl. today
+    toT5: Math.max(0, tiers[4] - mtd), needT5: Math.max(0, tiers[4] - mtd) / D.remDays };
 }
 // Racing growth MoM index = month estimate this month / last month qty (S+Z)
 function growth(est, lm) {
@@ -675,6 +677,7 @@ function racingCard() {
     <div class="lad" title="Bar = MTD qty · circle = month-end estimate · ticks = tier targets T1..T5"><i style="width:${pos(o.mtd)}%"></i>${ticks}<u style="left:${pos(o.est)}%"></u></div>
     <div class="foot">Growth MoM index <b>${o.idx == null ? "—" : o.idx.toFixed(2)}</b> (est. ${fmt(o.est)} ÷ last month ${fmt(o.lm)}) · <span class="s-good">${o.grow}</span> of ${o.n} stores growing</div>
     <div class="est">${o.next != null ? `To reach <b>T${o.zone + 1}</b> (${fmt(o.next)}): <b>+${fmt(o.toNext)}</b> on top of the estimate · ${o.needNext.toFixed(1)}/day from MTD` : `<b>All 5 tiers passed</b> on estimate`}</div>
+    <div class="est">Daily target for <b>Tier 5</b> (${fmt(o.tiers[4])}): ${o.toT5 > 0 ? `<b>${o.needT5.toFixed(1)}</b>/day · gap ${fmt(o.toT5)} in ${D.remDays} days${D.hasToday ? ` · today <b class="${o.today >= o.needT5 ? "s-good" : "s-crit"}">${fmt(o.today)}</b>` : ""}` : `<b class="s-good">T5 reached</b>`}</div>
     <div class="est">${D.hasToday ? `Today <b>+${fmt(o.today)}</b> S+Z (POS until ${D.j.today_last_time.slice(0, 5)}) · MTD + today <b>${fmt(o.tot)}</b> · ${fmt(o.n - o.inactive)} of ${fmt(o.n)} stores sold S+Z today` : "Today's POS not loaded yet"}</div></div>`;
 }
 
@@ -906,14 +909,14 @@ function renderReview(rows) {
 function renderReviewRacing(rows) {
   const t = document.getElementById("revTable"), top = topModels(rows.length ? rows : STORES);
   document.getElementById("reviewNote").innerHTML = `Racing (S+Z Series) · ${rows.length} stores. <b>Tier</b> from the month-end estimate: under T1 → <i>Under T1</i>; passes T1 but below T2 → <i>Tier 2</i>; … passes T5 → <i>Above T5</i>. ` +
-    `<b>To go</b> = next tier − estimate · <b>Need/day</b> = (next tier − MTD) ÷ ${D.remDays} days · <b>Index</b> = estimate ÷ last month (above 1 = growing). Group rows (LOB, TSH, total) use summed targets and qty; ` +
+    `<b>Next (+ on est.)</b> = next tier and the units needed on top of the estimate · <b>Need/day</b> = (next tier − MTD) ÷ ${D.remDays} days · <b>Tier 5 gap</b> = T5 − MTD; <b>/ day</b> = daily target for Tier 5 = gap ÷ ${D.remDays} days (✓ = today already at or above it) · <b>Index</b> = estimate ÷ last month (above 1 = growing). Group rows (LOB, TSH, total) use summed targets and qty; ` +
     `the right column shows stores by tier (Under T1 · Tier 2 … Above T5), or the store's own T1 → T5 ladder (blue = passed by the estimate).`;
   const cols = [["name", "LOB / TSH / Store", "l", ""], ["n", "Stores", "", ""],
     ["r1", "T1", "bl", "Tier targets"], ["r5", "T5", "", ""],
     ["mtd", "MTD", "bl", "S+Z qty"], ["today", "Today", "", ""], ["tot", "MTD+today", "", ""], ["est", "Est.", "bl", "Month-end"], ["zone", "Tier (est.)", "", ""],
-    ["next", "Next", "bl", "To move up"], ["toNext", "To go", "", ""], ["needNext", "Need/day", "", ""],
+    ["next", "Next (+ on est.)", "bl", "To move up"], ["needNext", "Need/day", "", ""], ["toT5", "Gap", "bl", "Tier 5"], ["needT5", "/ day", "", ""],
     ["lm", "Last month", "bl", "Growth MoM"], ["idx", "Index", "", ""], ["grow", "Growing", "", ""],
-    ["", "Stores by tier / ladder", "bl", ""], ["stock", "Units", "bl", "S+Z stock"], ["cover", "Cover", "", ""], ["oos", "Top-5 OOS", "l", ""]];
+    ["", "Stores by tier / ladder", "bl", ""], ["stock", "Units", "bl", "S+Z stock"], ["cover", "Cover", "", ""]];
   const key = cols.some((c) => c[0] === state.sortKey) ? state.sortKey : "name", dir = state.sortDir === "asc" ? 1 : -1;
   t.tHead.innerHTML = `<tr>${cols.map(([k, l, c, grp]) => `<th data-k="${k}" class="${c}${grp ? " gstart" : ""}" ${key === k && k ? `aria-sort="${state.sortDir === "asc" ? "ascending" : "descending"}"` : ""}><span class="grp">${grp || "&nbsp;"}</span>${l}</th>`).join("")}</tr>`;
   const tree = new Map();
@@ -924,15 +927,14 @@ function renderReviewRacing(rows) {
   const groupRow = (lvl, k, label, o) => `<tr class="g${lvl}" data-key="${esc(k)}">
       <td class="l name" style="padding-left:${8 + lvl * 18}px" title="${esc(label)}"><span class="caret">${state.open.has(k) ? "▼" : "▶"}</span><span class="lvl">${["LOB", "TSH"][lvl]}</span>${esc(label)}</td>
       <td>${fmt(o.n)}</td>${racingCells(o, false, true)}<td class="bl">${tdistHtml(o.byTier)}</td>
-      <td class="bl">${fmt(o.stock)}</td><td>${coverHtml(o.cover)}</td><td class="l ${o.oosN ? "oos" : "muted"}">${o.oosN ? o.oosN + " store" + (o.oosN === 1 ? "" : "s") : "—"}</td></tr>`;
+      <td class="bl">${fmt(o.stock)}</td><td>${coverHtml(o.cover)}</td></tr>`;
   const storeRow = (s) => {
     const m = metrics(s, "r"), oos = oosOf(s, top);
     const ladder = m.hasTier ? `<span class="ladder" title="Tier ladder T1 → T5 (blue = passed by the month-end estimate)">${s.tiers.map((v) => m.est >= v && v > 0 ? `<b>${fmt(v)}</b>` : fmt(v)).join(" · ")}</span>` : "—";
     return `<tr class="st ${state.store === s.site ? "sel" : ""}" data-site="${s.site}" title="${esc(s.name)} · ${esc(s.ch)} · click to focus on this store">
       <td class="l name" style="padding-left:44px"><span class="site">${s.site}</span>${esc(shortName(s.name))}</td><td class="muted" title="${esc(s.ch)}">${esc(chShort(s.ch))}</td>
       ${racingCells({ ...m, tiers: s.tiers }, true, true)}
-      <td class="bl">${ladder}</td><td class="bl">${fmt(m.stock)}</td><td>${coverHtml(m.cover)}</td>
-      <td class="l ${oos.length ? "oos" : "muted"}" title="${esc(oos.join(", "))}">${oos.length ? esc(oos.slice(0, 3).join(", ")) + (oos.length > 3 ? ` +${oos.length - 3}` : "") : "—"}</td></tr>`;
+      <td class="bl">${ladder}</td><td class="bl">${fmt(m.stock)}</td><td>${coverHtml(m.cover)}</td></tr>`;
   };
   let html = "";
   sortEntries([...tree].map(([lob, tshs]) => [lob, { ...pack([...tshs.values()].flat()), tshs }])).forEach(([lob, ol]) => {
@@ -948,7 +950,7 @@ function renderReviewRacing(rows) {
   });
   t.tBodies[0].innerHTML = html || `<tr><td class="l" colspan="${cols.length}">No Racing stores match the filter.</td></tr>`;
   const o = pack(rows);
-  t.tFoot.innerHTML = rows.length ? `<tr><td class="l">Region / total</td><td>${fmt(o.n)}</td>${racingCells(o, false, true)}<td class="bl">${tdistHtml(o.byTier)}</td><td class="bl">${fmt(o.stock)}</td><td>${coverHtml(o.cover)}</td><td class="l">${o.oosN} stores</td></tr>` : "";
+  t.tFoot.innerHTML = rows.length ? `<tr><td class="l">Region / total</td><td>${fmt(o.n)}</td>${racingCells(o, false, true)}<td class="bl">${tdistHtml(o.byTier)}</td><td class="bl">${fmt(o.stock)}</td><td>${coverHtml(o.cover)}</td></tr>` : "";
 }
 
 // ---------- breakdown table (like iP18 vs iP17): both targets side by side ----------
@@ -1006,7 +1008,7 @@ function renderBreakdown(rows) {
 // ---------- Racing breakdown: tiers by Business unit / Channel / LOB / TSH ----------
 function racingRowVals(o) {
   return { n: o.n, r1: o.tiers[0], r2: o.tiers[1], r3: o.tiers[2], r4: o.tiers[3], r5: o.tiers[4], mtd: o.mtd, today: o.today, tot: o.tot, est: o.est,
-           zone: o.zone ?? -1, next: o.next ?? 0, toNext: o.toNext, needNext: o.needNext, lm: o.lm, idx: o.idx ?? -1,
+           zone: o.zone ?? -1, next: o.next ?? 0, toNext: o.toNext, needNext: o.needNext, needT5: o.hasTier ? o.needT5 : -1, toT5: o.hasTier ? o.toT5 : -1, lm: o.lm, idx: o.idx ?? -1,
            grow: o.n > 1 ? o.grow : (o.grow ? 1 : 0), stock: o.stock, cover: o.cover };
 }
 // today's S+Z units (PAID POS); for a store with nothing today, say whether it traded at all
@@ -1021,8 +1023,11 @@ function racingCells(o, store = false, compact = false) {   // compact: only T1 
   return `${has ? tcols.map((i, k) => `<td class="${k ? "" : "bl"}">${fmt(o.tiers[i])}</td>`).join("")
                : `<td class="bl muted" colspan="${tcols.length}" style="text-align:center">no target</td>`}
     <td class="bl">${fmt(o.mtd)}</td>${todayCell(o, store)}<td>${fmt(o.tot)}</td><td class="bl"><b>${fmt(o.est)}</b></td><td>${tierHtml(o.zone, has)}</td>
-    <td class="bl">${!has ? "—" : o.next == null ? `<span class="s-good">All passed</span>` : `T${o.zone + 1} · ${fmt(o.next)}`}</td>
-    <td>${!has || o.next == null ? "—" : "+" + fmt(o.toNext)}</td><td>${!has || o.next == null ? "—" : o.needNext.toFixed(1)}</td>
+    <td class="bl">${!has ? "—" : o.next == null ? `<span class="s-good">All passed</span>` : `T${o.zone + 1} · ${fmt(o.next)} <span class="muted">(+${fmt(o.toNext)})</span>`}</td>
+    <td>${!has || o.next == null ? "—" : o.needNext.toFixed(1)}</td>
+    <td class="bl">${!has ? "—" : o.toT5 <= 0 ? `<span class="s-good">0</span>` : fmt(o.toT5)}</td>
+    <td title="${has ? `Gap: T5 ${fmt(o.tiers[4])} − MTD ${fmt(o.mtd)} = ${fmt(o.toT5)} ÷ ${D.remDays} days` : ""}">${!has ? "—" : o.toT5 <= 0 ? `<span class="s-good">T5 ✓</span>`
+      : `<b>${o.needT5.toFixed(1)}</b>${D.hasToday ? (o.today >= o.needT5 ? ` <span class="s-good" title="Today already at or above the daily T5 target">✓</span>` : "") : ""}`}</td>
     <td class="bl">${fmt(o.lm)}</td><td>${idxHtml(o.idx)}</td>
     <td>${store ? "" : `<b class="s-good">${o.grow}</b><span class="muted">/${o.n}</span>`}</td>`;
 }
@@ -1040,12 +1045,12 @@ function renderBreakdownRacing(rows) {
   const tot = sumMetrics(rows, "r");
   document.getElementById("brkNote").innerHTML = `${tot.withT} stores with a Racing target in the current filter. Tier targets are summed per row. ` +
     `<b>Tier</b> from the month-end estimate: est. under T1 → <i>Under T1</i>; passes T1 but below T2 → <i>Tier 2</i>; … passes T4 but below T5 → <i>Tier 5</i>; passes T5 → <i>Above T5</i>. ` +
-    `<b>To go</b> = next tier − estimate; <b>Need/day</b> = (next tier − MTD) ÷ ${D.remDays} days. <b>Growth index</b> = estimate ÷ last month S+Z (▲ above 1 = growing); <b>Growing</b> = stores growing / stores. Click a row to filter, a column to sort.`;
+    `<b>Next (+ on est.)</b> = next tier and the units needed on top of the estimate; <b>Need/day</b> = (next tier − MTD) ÷ ${D.remDays} days; <b>Tier 5 gap</b> = T5 − MTD; <b>/ day</b> = daily target for Tier 5 = gap ÷ ${D.remDays} days. <b>Growth index</b> = estimate ÷ last month S+Z (▲ above 1 = growing); <b>Growing</b> = stores growing / stores. Click a row to filter, a column to sort.`;
   const th = (k, l, c = "", g = "") => `<th data-k="${k}" class="${c}${g ? " gstart" : ""}" ${sk === k ? `aria-sort="${state.bDir === "asc" ? "ascending" : "descending"}"` : ""}><span class="grp">${g || "&nbsp;"}</span>${l}</th>`;
   t.tHead.innerHTML = `<tr>${keys.map(([, l], i) => th(i === keys.length - 1 ? "name" : "", l, "l")).join("")}${th("n", "Stores")}
     ${th("r1", "T1", "bl", "Tier targets")}${th("r2", "T2")}${th("r3", "T3")}${th("r4", "T4")}${th("r5", "T5")}
     ${th("mtd", "MTD", "bl", "S+Z qty")}${th("today", "Today")}${th("tot", "MTD+today")}${th("est", "Est.", "bl", "Month-end")}${th("zone", "Tier (est.)")}
-    ${th("next", "Next", "bl", "To move up")}${th("toNext", "To go")}${th("needNext", "Need/day")}
+    ${th("next", "Next (+ on est.)", "bl", "To move up")}${th("needNext", "Need/day")}${th("toT5", "Gap", "bl", "Tier 5")}${th("needT5", "/ day")}
     ${th("lm", "Last month", "bl", "Growth MoM")}${th("idx", "Index")}${th("grow", "Growing")}
     ${th("", "Stores by tier", "bl")}${th("stock", "S+Z stock", "bl")}${th("cover", "Cover")}</tr>`;
   const filt = (g) => state.brk === "bu" || state.brk === "ch" ? { bu: g.labels[0] } : state.brk === "lob" ? { lob: g.labels[0] } : { lob: g.labels[0], tsh: g.labels[1] };
