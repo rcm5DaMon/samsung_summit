@@ -5,53 +5,72 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Samsung Targets · Summit · A Series · Racing · November</title>
 <style>
+  /* Samsung x Erajaya dashboard palette
+     brand: Samsung blue #1428A0 · Midnight navy #0A1550 · Erajaya red #E4002B · Samsung black #000000
+     supporting blues: Galaxy #3D5AFE · Periwinkle #7B93F5 · Soft blue #C7D2FE · Ice #EEF2FF
+     status & neutrals: On target #0E9F6E · Watch #F59E0B · Muted text #64748B · Canvas #F5F7FB */
   :root {
     color-scheme: light;
-    --surface-0: #f2f4f8;
-    --surface-1: #ffffff;
-    --border: #dde2ec;
-    --grid: #e9edf4;
-    --text-primary: #000000;
-    --text-secondary: #4b5162;
-    --text-muted: #8a90a0;
-    --series-1: #1428a0;      /* Samsung blue */
-    --series-1-soft: #dce3fa;
-    --accent: #2189ff;        /* lighter Samsung blue */
-    --hero: #000000;
-    --hero-2: #1428a0;
-    --target: #8a90a0;
-    --good: #0ca30c;
-    --warning: #fab219;
-    --critical: #d03b3b;
-    --good-text: #006300;
-    --warning-text: #8a5a00;
-    --critical-text: #b02a2a;
-    --lvl0: #e3e8f7;
-    --lvl1: #eef1fa;
-    --lvl2: #f6f8fd;
+    --surface-0: #F5F7FB;     /* Canvas */
+    --surface-1: #FFFFFF;
+    --border: #E5E7EB;
+    --grid: #EEF2FF;          /* Ice */
+    --text-primary: #0A1550;  /* Midnight navy */
+    --text-secondary: #475569;
+    --text-muted: #64748B;    /* Muted text */
+    --series-1: #1428A0;      /* Samsung blue */
+    --series-1-soft: #C7D2FE; /* Soft blue */
+    --accent: #3D5AFE;        /* Galaxy blue */
+    --brand-red: #E4002B;     /* Erajaya red */
+    --hero: #0A1550;
+    --hero-2: #1428A0;
+    --target: #64748B;
+    --good: #0E9F6E;          /* On target */
+    --warning: #F59E0B;       /* Watch */
+    --critical: #E4002B;      /* Erajaya red */
+    --good-text: #0B8A5F;
+    --warning-text: #B45309;
+    --critical-text: #E4002B;
+    --lvl0: #E0E7FF;
+    --lvl1: #EEF2FF;
+    --lvl2: #F7F9FF;
+    --tier1-bg: #EEF2FF; --tier1-fg: #1428A0;   /* Tier 2   */
+    --tier2-bg: #C7D2FE; --tier2-fg: #0A1550;   /* Tier 3   */
+    --tier3-bg: #7B93F5; --tier3-fg: #FFFFFF;   /* Tier 4   */
+    --tier4-bg: #3D5AFE; --tier4-fg: #FFFFFF;   /* Tier 5   */
+    --tier5-bg: #1428A0; --tier5-fg: #FFFFFF;   /* Above T5 */
   }
   @media (prefers-color-scheme: dark) {
     :root {
       color-scheme: dark;
-      --surface-0: #07090f;
-      --surface-1: #11141d;
-      --border: #252a38;
-      --grid: #1c2030;
-      --text-primary: #f2f4f8;
-      --text-secondary: #b9bfcd;
-      --text-muted: #7d8496;
-      --series-1: #4d7bff;
-      --series-1-soft: #17245a;
-      --accent: #6ea8ff;
-      --hero: #000000;
-      --hero-2: #1428a0;
-      --target: #7d8496;
-      --good-text: #4cc94c;
-      --warning-text: #fab219;
-      --critical-text: #f07a7a;
-      --lvl0: #172045;
-      --lvl1: #131a33;
-      --lvl2: #11162a;
+      --surface-0: #060A1F;
+      --surface-1: #0D1433;
+      --border: #1F2A5C;
+      --grid: #16204A;
+      --text-primary: #EEF2FF;
+      --text-secondary: #C7D2FE;
+      --text-muted: #8B9BD9;
+      --series-1: #7B93F5;
+      --series-1-soft: #1F2E7A;
+      --accent: #3D5AFE;
+      --brand-red: #FF3355;
+      --hero: #0A1550;
+      --hero-2: #1428A0;
+      --target: #8B9BD9;
+      --good: #10B981;
+      --warning: #F59E0B;
+      --critical: #FF3355;
+      --good-text: #34D399;
+      --warning-text: #FBBF24;
+      --critical-text: #FF5C77;
+      --lvl0: #16204A;
+      --lvl1: #111A3E;
+      --lvl2: #0F1736;
+      --tier1-bg: #1F2E7A; --tier1-fg: #EEF2FF;
+      --tier2-bg: #3346A8; --tier2-fg: #FFFFFF;
+      --tier3-bg: #5A73E8; --tier3-fg: #FFFFFF;
+      --tier4-bg: #3D5AFE; --tier4-fg: #FFFFFF;
+      --tier5-bg: #C7D2FE; --tier5-fg: #0A1550;
     }
   }
   * { box-sizing: border-box; }
@@ -59,16 +78,17 @@
          font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   .wrap { max-width: 1600px; margin: 0 auto; padding: 20px 20px 48px; }
   header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 16px;
-           background: linear-gradient(110deg, var(--hero) 0%, var(--hero) 45%, var(--hero-2) 100%); color: #fff;
+           background: linear-gradient(110deg, var(--hero) 0%, var(--hero-2) 70%, var(--hero-2) 100%); color: #fff;
            border-radius: 16px; padding: 22px 24px 20px; }
-  .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: #8fb4ff; margin-bottom: 4px; }
+  .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: #C7D2FE; margin-bottom: 4px; }
   h1 { font-size: 30px; margin: 0; letter-spacing: .02em; font-weight: 800; text-transform: uppercase; }
   h1 span { font-weight: 300; }
   .sub { color: rgba(255,255,255,.75); margin-top: 4px; }
   header .chip { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.22); color: rgba(255,255,255,.88); }
   header .btn-ghost { background: transparent; border-color: rgba(255,255,255,.35); color: #fff; }
   header .btn-ghost:hover { border-color: #fff; }
-  header .btn { background: #fff; color: #1428a0; font-weight: 700; border-radius: 999px; padding: 6px 16px; }
+  header .btn { background: #fff; color: #1428A0; font-weight: 700; border-radius: 999px; padding: 6px 16px; }
+  header .chip.red { background: #E4002B; border-color: #E4002B; color: #fff; font-weight: 600; }
   .meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   .chip { font-size: 12px; color: var(--text-secondary); background: var(--surface-1); border: 1px solid var(--border);
           border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
@@ -103,8 +123,10 @@
   .kpis > .kpi.prog { grid-column: span 4; }
   .tier { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; white-space: nowrap; line-height: 1.5; }
   .tier.t0 { color: var(--critical-text); box-shadow: inset 0 0 0 1px currentColor; }
-  .tier.t1 { background: #dce3fa; color: #1428a0; } .tier.t2 { background: #b3c2f4; color: #0e1f80; }
-  .tier.t3 { background: #6d89e8; color: #fff; } .tier.t4 { background: #2f4fd0; color: #fff; } .tier.t5 { background: #1428a0; color: #fff; }
+  .tier.t1 { background: var(--tier1-bg); color: var(--tier1-fg); box-shadow: inset 0 0 0 1px var(--series-1-soft); }
+  .tier.t2 { background: var(--tier2-bg); color: var(--tier2-fg); }
+  .tier.t3 { background: var(--tier3-bg); color: var(--tier3-fg); } .tier.t4 { background: var(--tier4-bg); color: var(--tier4-fg); }
+  .tier.t5 { background: var(--tier5-bg); color: var(--tier5-fg); }
   .tdist { display: inline-flex; gap: 3px; vertical-align: middle; }
   .tdist i { font-style: normal; font-size: 11px; font-weight: 700; min-width: 20px; text-align: center; border-radius: 4px; padding: 0 3px; }
   .tdist i.z { opacity: .25; }
@@ -235,7 +257,7 @@
       <div class="legend">
         <span><i class="sw" style="border-color:var(--series-1)"></i>Actual (cumulative)</span>
         <span><i class="sw" style="border-color:var(--target);border-top-style:dashed"></i>Target pace</span>
-        <span><i class="sw" style="border-color:var(--series-1);border-top-style:dotted"></i>Month-end estimate</span>
+        <span><i class="sw" style="border-color:var(--accent);border-top-style:dotted"></i>Month-end estimate</span>
       </div>
       <div class="chart-box" id="paceBox"><svg id="paceChart" viewBox="0 0 640 330" role="img" aria-label="Cumulative sales vs target pace"></svg><div class="tip"></div></div>
     </div>
@@ -510,7 +532,7 @@ function initUi() {
   m.innerHTML = `
     <button type="button" class="btn-ghost" id="shotSave" data-noshot title="Save the dashboard, as currently filtered, as a PNG">📷 Save PNG</button>
     <button type="button" class="btn-ghost" id="shotCopy" data-noshot title="Copy the image to paste into WhatsApp / email">Copy image</button>
-    <span class="chip">Sales to ${longDate(j.sales_asof)}${D.hasToday ? ` + today until ${j.today_last_time.slice(0, 5)}` : ""}</span>
+    <span class="chip red">Sales to ${longDate(j.sales_asof)}${D.hasToday ? ` + today until ${j.today_last_time.slice(0, 5)}` : ""}</span>
     <span class="chip" title="Actual stock date (stored as ${j.stock_date} in sales_vs_stock)">Stock ${longDate(D.stockDate)}</span>
     <span class="chip">Imported ${j.refreshed_at.slice(0, 16)} WIB</span>
     <a class="btn" data-noshot target="_blank" rel="noopener" href="https://github.com/${GITHUB_REPO}/actions/workflows/refresh.yml">Refresh data ↗</a>`;
@@ -729,7 +751,7 @@ function renderPace(rows) {
   const bw = Math.max(2, iw / D.totalDays - 4);
   perDay.slice(0, D.doneDays).forEach((v, i) => { if (v > 0) g += `<rect x="${x(i) - bw / 2}" y="${y(v)}" width="${bw}" height="${y(0) - y(v)}" rx="2" fill="var(--series-1-soft)"/>`; });
   if (D.doneDays) {
-    g += `<line x1="${x(D.doneDays - 1)}" y1="${y(c)}" x2="${x(D.totalDays - 0.5)}" y2="${y(o.est)}" stroke="var(--series-1)" stroke-width="1.5" stroke-dasharray="1 4" stroke-linecap="round"/>
+    g += `<line x1="${x(D.doneDays - 1)}" y1="${y(c)}" x2="${x(D.totalDays - 0.5)}" y2="${y(o.est)}" stroke="var(--accent)" stroke-width="2" stroke-dasharray="1 4" stroke-linecap="round"/>
           <circle cx="${x(D.totalDays - 0.5)}" cy="${y(o.est)}" r="4" fill="var(--surface-1)" stroke="var(--series-1)" stroke-width="2"/>`;
   }
   const pts = [[x(-0.5), y(0)], ...cum.map((v, i) => [x(i), y(v)])];
