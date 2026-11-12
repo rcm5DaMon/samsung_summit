@@ -5,6 +5,7 @@
 --   A Series      : master_data.target_aseries_samsung.target_Aseries = SAMSUNG Device, Detail_Cat = 'A SERIES' qty
 --   Racing        : master_data.target_racing_samsung, 5 tiers per store = SAMSUNG Device, Detail_Cat in S SERIES / Z SERIES qty
 -- Store list = every store in the three target files (site codes are TRIMmed: the Racing file has ' F285')
+--   PLUS every ACTIVE store in master_store_r5 (STATUS = 'Active') in BU_CATEGORY 1MULTIBRAND / 5JB / 6OS / 3NASA, even with no sales
 --   PLUS every Region 5 site that sold SAMSUNG Device this month, last month or today and can sell Samsung:
 --   BU_CATEGORY 1MULTIBRAND / 5JB / 6OS / 3NASA, or an exhibition (STATUS or CHANNEL = EXHIBITION). 7ERABLUE and DCs (4DEPO) are never added.
 --   Those extra sites have no target, but their sales count in every total. Store attributes come from sales_b2c.master_store_r5.
@@ -90,12 +91,19 @@ sellers AS (
   WHERE (m.BU_CATEGORY IN ('1MULTIBRAND', '5JB', '6OS', '3NASA') OR m.STATUS = 'EXHIBITION' OR m.CHANNEL = 'EXHIBITION')
     AND m.BU_CATEGORY <> '7ERABLUE' AND IFNULL(m.STORE_LOCATION, '') <> '4DEPO'
 ),
--- the dashboard's store list: target-file stores + Samsung sellers (seller = 1 when it sold Samsung Device in the window)
+-- every ACTIVE store of a business unit that sells Samsung (included even with no sales, so it shows as inactive)
+active AS (
+  SELECT TRIM(site_code) AS site FROM `e-smart-433113.sales_b2c.master_store_r5`
+  WHERE STATUS = 'Active' AND BU_CATEGORY IN ('1MULTIBRAND', '5JB', '6OS', '3NASA') AND IFNULL(STORE_LOCATION, '') <> '4DEPO'
+),
+in_scope AS (SELECT site FROM sellers UNION DISTINCT SELECT site FROM active),
+-- the dashboard's store list: target-file stores + active Samsung-BU stores + Samsung sellers
+-- (seller = 1 when the store is in scope for every view: sold Samsung Device in the window, or is an active Samsung-BU store)
 stores AS (
   SELECT site, IFNULL(td, 0) AS td, IFNULL(ta, 0) AS ta, IFNULL(in_s, 0) AS in_s, IFNULL(in_a, 0) AS in_a, IFNULL(in_r, 0) AS in_r,
          IFNULL(r1, 0) AS r1, IFNULL(r2, 0) AS r2, IFNULL(r3, 0) AS r3, IFNULL(r4, 0) AS r4, IFNULL(r5, 0) AS r5,
-         IF(sellers.site IS NULL, 0, 1) AS seller
-  FROM tgt FULL JOIN sellers USING (site)
+         IF(in_scope.site IS NULL, 0, 1) AS seller
+  FROM tgt FULL JOIN in_scope USING (site)
 ),
 
 
