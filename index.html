@@ -388,7 +388,10 @@ function prep(j) {
   split(j.lm).forEach(([site, q]) => { const s = map.get(site); if (s) s.lm = +q; });   // last month S+Z qty
   const dcName = new Map(split(j.dcs).map(([site, name, bu]) => [site, { name, bu }]));
   const dcStock = split(j.dc_stock).map(([site, cat, model, variant, q]) => ({ site, cat, model, variant: variant || model, q: +q, ...(dcName.get(site) || { name: site, bu: "" }) }));
-  return { j, start, end, totalDays, doneDays, remDays, hasToday, dcStock };
+  // the stock snapshot is stored back-dated by one day in sales_vs_stock; the actual stock date is the next day
+  const sd = new Date(parseDate(j.stock_date).getTime() + dayMs);
+  const stockDate = `${sd.getFullYear()}-${String(sd.getMonth() + 1).padStart(2, "0")}-${String(sd.getDate()).padStart(2, "0")}`;
+  return { j, start, end, totalDays, doneDays, remDays, hasToday, dcStock, stockDate };
 }
 
 // per-store metrics for the selected target
@@ -508,13 +511,13 @@ function initUi() {
     <button type="button" class="btn-ghost" id="shotSave" data-noshot title="Save the dashboard, as currently filtered, as a PNG">📷 Save PNG</button>
     <button type="button" class="btn-ghost" id="shotCopy" data-noshot title="Copy the image to paste into WhatsApp / email">Copy image</button>
     <span class="chip">Sales to ${longDate(j.sales_asof)}${D.hasToday ? ` + today until ${j.today_last_time.slice(0, 5)}` : ""}</span>
-    <span class="chip">Stock ${longDate(j.stock_date)}</span>
+    <span class="chip" title="Actual stock date (stored as ${j.stock_date} in sales_vs_stock)">Stock ${longDate(D.stockDate)}</span>
     <span class="chip">Imported ${j.refreshed_at.slice(0, 16)} WIB</span>
     <a class="btn" data-noshot target="_blank" rel="noopener" href="https://github.com/${GITHUB_REPO}/actions/workflows/refresh.yml">Refresh data ↗</a>`;
   document.getElementById("shotSave").onclick = () => takeShot("save");
   document.getElementById("shotCopy").onclick = () => takeShot("copy");
   document.querySelectorAll(".f-asof").forEach((e) => e.textContent = longDate(j.sales_asof));
-  document.querySelectorAll(".f-stock").forEach((e) => e.textContent = longDate(j.stock_date));
+  document.querySelectorAll(".f-stock").forEach((e) => e.textContent = `${longDate(D.stockDate)} (stored as ${j.stock_date})`);
 
   document.querySelector("#revTable thead").onclick = (e) => {
     const c = e.target.closest("th"); if (!c || !c.dataset.k) return;
@@ -832,7 +835,7 @@ function renderReview(rows) {
     ["est", "Units", "bl", "Month-end est."], ["estAchv", "Achv", "", ""],
     ["gap", "Gap", "bl", "To close"], ["need", "Need/day", "", ""],
     ["onMtd", "MTD", "bl", "On track"], ["onEst", "Est.", "", ""],
-    ["stock", "Units", "bl", "Store stock " + D.j.stock_date.slice(8) + "/" + D.j.stock_date.slice(5, 7)], ["cover", "Cover", "", ""], ["short", "vs gap", "", ""], ["oos", "Top-5 OOS", "l", ""]];
+    ["stock", "Units", "bl", "Store stock " + D.stockDate.slice(8) + "/" + D.stockDate.slice(5, 7)], ["cover", "Cover", "", ""], ["short", "vs gap", "", ""], ["oos", "Top-5 OOS", "l", ""]];
   t.tHead.innerHTML = `<tr>${cols.map(([k, l, c, grp]) => `<th data-k="${k}" class="${c}${grp ? " gstart" : ""}" ${state.sortKey === k ? `aria-sort="${state.sortDir === "asc" ? "ascending" : "descending"}"` : ""}><span class="grp">${grp || "&nbsp;"}</span>${l}</th>`).join("")}</tr>`;
 
   // build tree
@@ -1112,7 +1115,7 @@ function renderModels(rows) {
   const list = [...cats.values()].filter((g) => g.mtd || g.today || g.stock || g.dc)
     .sort((a, b) => byVol(a, b) || CAT_ORDER.indexOf(a.cat) - CAT_ORDER.indexOf(b.cat));
   const nVar = list.reduce((a, g) => a + [...g.vars.values()].filter((o) => o.mtd || o.today || o.stock || o.dc).length, 0);
-  document.getElementById("stockNote").innerHTML = `${P} · ${n} stores in view · store stock on ${D.j.stock_date} · DC = ${[...pools].map((p) => p === "3NASA" ? "NASA DCs" : "Erafone DCs").join(" + ")}. ` +
+  document.getElementById("stockNote").innerHTML = `${P} · ${n} stores in view · store stock on ${D.stockDate} · DC = ${[...pools].map((p) => p === "3NASA" ? "NASA DCs" : "Erafone DCs").join(" + ")}. ` +
     `Grouped by Detail_Cat, then Model_Type_Detail + Model_Category, then store. Click a category or model row to open or close it; stores are listed most urgent first (sold but out of stock, then lowest cover). Cover = (stock ÷ month-end estimate qty) × 30.42. "Sold, now 0 stock" = stores that sold it this month but hold none now.`;
   t.tHead.innerHTML = `<tr><th class="l">Detail_Cat / Model type detail + category / Store</th><th class="bl">MTD</th><th>Today</th><th>Est. month</th><th>Share</th>
     <th class="bl">Store stock</th><th>Cover</th><th>DC stock</th><th>Cover incl. DC</th><th class="bl">Stores with stock</th><th>Sold, now 0 stock</th><th class="l bl">Stock health</th></tr>`;
@@ -1172,7 +1175,7 @@ function stockCsv(rows) {
   const blob = new Blob(["\ufeff" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
   const a = document.createElement("a"), now = new Date(), p = (n) => String(n).padStart(2, "0");
   a.href = URL.createObjectURL(blob);
-  a.download = `Samsung_store_stock_${PROG[k].replace(/\W+/g, "_")}_${D.j.stock_date}_${now.getFullYear()}${p(now.getMonth() + 1)}${p(now.getDate())}.csv`;
+  a.download = `Samsung_store_stock_${PROG[k].replace(/\W+/g, "_")}_${D.stockDate}_${now.getFullYear()}${p(now.getMonth() + 1)}${p(now.getDate())}.csv`;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   toast(`Downloaded ${lines.length - 1} store × model rows`);
 }
