@@ -100,3 +100,7 @@ You can refresh many times a day.
 ## ⚠ Visibility
 GitHub Pages sites are **public** unless your org has GitHub Enterprise Cloud with private Pages.
 Anyone with the URL can see store names and figures.
+
+## Phone layout
+
+On screens up to 700 px wide (phones) the same page switches layout automatically: compact header; a sticky bar with the target switch (Summit / A Series / Racing) and a **☰ Filters** button that folds out BU / LOB / TSH / Store / search; KPI cards you swipe left and right (the selected target first); store **cards** instead of the wide review table (LOB → TSH → store, tap a group to open it, tap a store to focus the page on it, sort picker; a **Table** button switches back to the table); wide tables keep the name column fixed while you scroll sideways; long notes show 2 lines (tap to read all); a bottom bar jumps to Summary · Charts · Breakdown · Stores · Stock. Desktop is unchanged.

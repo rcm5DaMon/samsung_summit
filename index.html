@@ -213,6 +213,127 @@
   .oos { color: var(--critical-text); font-size: 12px; }
   .lvlbtns { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; color: var(--text-secondary); }
 
+
+  /* ---------- phone layout (≤ 700px) ---------- */
+  .ph-only { display: none !important; }
+  .cards { display: none; }
+  .mnav { display: none; }
+  .ftoggle { display: none; }
+  .ccard { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; margin: 0 10px 8px; cursor: pointer; }
+  .ccard.sel { outline: 2px solid var(--series-1); outline-offset: -1px; }
+  .ccard .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .ccard .nm { font-weight: 700; font-size: 14px; line-height: 1.25; }
+  .ccard .nm .site { font-size: 12px; }
+  .ccard .sub2 { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+  .ccard .big { display: flex; align-items: baseline; gap: 8px; margin-top: 6px; }
+  .ccard .big b { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .ccard .big span { font-size: 12px; color: var(--text-secondary); }
+  .ccard .bar { margin-top: 6px; }
+  .ccard .kv { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 8px; margin-top: 8px; }
+  .ccard .kv div { font-size: 11px; color: var(--text-muted); line-height: 1.2; }
+  .ccard .kv div b { display: block; font-size: 14px; color: var(--text-primary); font-weight: 650; font-variant-numeric: tabular-nums; }
+  .ccard .ladder { display: block; margin-top: 6px; white-space: normal; }
+  .ghead { margin: 4px 10px 8px; padding: 9px 12px; border-radius: 10px; cursor: pointer; }
+  .ghead.g0 { background: var(--lvl0); }
+  .ghead.g1 { background: var(--lvl1); box-shadow: inset 3px 0 0 var(--series-1-soft); }
+  .ghead.g2 { border: 1px solid var(--border); }
+  .ghead .ttl { display: flex; justify-content: space-between; gap: 8px; align-items: center; font-weight: 750; color: var(--series-1); font-size: 14px; }
+  .ghead.g1 .ttl { color: var(--text-primary); font-size: 13px; }
+  .ghead .line { font-size: 12px; color: var(--text-secondary); margin-top: 3px; font-variant-numeric: tabular-nums; }
+  .ghead .line b { color: var(--text-primary); }
+  .ccard.lv2 { box-shadow: inset 3px 0 0 var(--grid); }
+  .ghead .ttl > span:last-child, .ccard .top > div:last-child { white-space: nowrap; flex: none; }
+  .cards-tools { display: flex; gap: 8px; align-items: center; padding: 0 12px 10px; font-size: 12px; color: var(--text-secondary); flex-wrap: wrap; }
+  .cards-tools select { flex: 1; min-width: 0; }
+
+  @media (max-width: 700px) {
+    .ph-only { display: revert !important; }
+    .wrap { padding: 8px 8px 84px; }
+    header { padding: 14px 14px 12px; border-radius: 12px; gap: 8px; margin-bottom: 10px; }
+    h1 { font-size: 20px; }
+    .eyebrow { font-size: 9px; letter-spacing: .16em; }
+    .sub { font-size: 12px; }
+    .meta { gap: 4px; }
+    header .chip { font-size: 11px; padding: 2px 8px; }
+    #shotCopy { display: none; }
+    header .btn, header .btn-ghost { font-size: 12px; padding: 4px 10px; }
+
+    /* sticky filter bar: target switch + filter button; selects fold out */
+    .filters { position: sticky; top: 0; z-index: 30; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px; border-radius: 0 0 12px 12px;
+               margin: 0 -8px 10px; border-left: 0; border-right: 0; border-top: 0; box-shadow: 0 4px 12px rgba(10,21,80,.08); }
+    .filters > .seg { grid-column: 1 / -1; display: flex; }
+    .filters > .seg button { flex: 1; padding: 7px 4px; font-size: 12px; }
+    .ftoggle { display: block; grid-column: 1 / -1; font: inherit; font-size: 13px; text-align: left; background: var(--surface-0); color: var(--text-primary);
+               border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+    .ftoggle b { color: var(--series-1); }
+    .filters > label, .filters > #fSearch, .filters > .spacer { display: none; }
+    .filters.open > label { display: flex; flex-direction: column; align-items: stretch; gap: 2px; font-size: 11px; }
+    .filters.open > label:nth-of-type(4) { grid-column: 1 / -1; }
+    .filters.open > #fSearch { display: block; grid-column: 1 / -1; width: 100%; }
+    .filters.open > label:nth-of-type(3) { grid-column: 1 / -1; }
+    .filters #fStore, .filters select { width: 100%; max-width: none !important; font-size: 14px; padding: 6px 8px; }
+    input[type=search] { font-size: 14px; }
+    #fClear { grid-column: 1 / -1; }
+    .banner { margin: 0 0 10px; font-size: 12px; flex-wrap: wrap; }
+
+    /* KPI cards: swipe left / right, the selected target first */
+    .kpis { display: flex; align-items: flex-start; overflow-x: auto; overflow-y: hidden; transition: height .2s; scroll-snap-type: x mandatory; gap: 8px; margin: 0 -8px 6px; padding: 0 8px 6px; scrollbar-width: none; }
+    .kpis::-webkit-scrollbar { display: none; }
+    .kpis > .kpi, .kpis > .kpi.prog { flex: 0 0 86%; scroll-snap-align: center; }
+    .kpis > .kpi.sel { order: -1; }
+    .kpi .value { font-size: 24px; }
+    .swipe-hint { display: block; text-align: center; font-size: 11px; color: var(--text-muted); margin-bottom: 10px; }
+    .swipe-hint i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--border); margin: 0 2px; vertical-align: middle; }
+    .swipe-hint i.on { background: var(--series-1); width: 14px; border-radius: 3px; }
+
+    .card { padding: 12px; border-radius: 12px; }
+    .grid2 { gap: 10px; margin-bottom: 10px; }
+    .legend { gap: 8px; font-size: 11px; }
+
+    /* long notes: 2 lines, tap to read all */
+    .note { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; font-size: 11px; }
+    .note.open { display: block; -webkit-line-clamp: unset; }
+    .note:not(.open)::after { content: ""; }
+
+    /* tables: smaller, scroll sideways, name column stays put */
+    .table-card { margin-bottom: 10px; scroll-margin-top: 110px; }
+    .table-head { padding: 12px 12px 8px; }
+    .table-head h2 { font-size: 14px; }
+    .lvlbtns { flex-wrap: wrap; font-size: 11px; }
+    .lvlbtns .seg button { padding: 5px 9px; font-size: 12px; }
+    .tscroll { max-height: 70vh; -webkit-overflow-scrolling: touch; }
+    table { font-size: 12px; }
+    th, td { padding: 5px 6px; }
+    th { font-size: 11px; }
+    td.name { max-width: 140px; }
+    th:first-child, td:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface-1); box-shadow: inset -1px 0 0 var(--border); }
+    th:first-child { z-index: 4; box-shadow: inset 0 -2px 0 var(--series-1), inset -1px 0 0 var(--border); }
+    tr.g0 td:first-child { background: var(--lvl0); } tr.g1 td:first-child { background: var(--lvl1); } tr.g2 td:first-child { background: var(--lvl2); }
+    tr.st.sel td:first-child { background: var(--series-1-soft); }
+    tfoot td:first-child { z-index: 3; }
+    #modelTable td:first-child, #brkTable td:first-child { max-width: 170px; overflow: hidden; text-overflow: ellipsis; }
+    th:first-child { white-space: normal; min-width: 110px; max-width: 170px; }
+    td.name[style*="padding-left:44px"] { padding-left: 22px !important; }
+    td.name[style*="padding-left:26px"] { padding-left: 16px !important; }
+
+    /* store cards replace the review table on phones (toggle back to the table any time) */
+    body.cards-on #secRev .tscroll { display: none; }
+    body.cards-on .cards { display: block; padding-bottom: 4px; }
+
+    footer { font-size: 11px; }
+    footer p:last-child { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
+    footer p.open { display: block; }
+
+    /* bottom navigation */
+    .mnav { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: var(--surface-1); border-top: 1px solid var(--border);
+            padding: 4px 4px calc(4px + env(safe-area-inset-bottom)); box-shadow: 0 -4px 14px rgba(10,21,80,.08); }
+    .mnav a { flex: 1; text-align: center; text-decoration: none; color: var(--text-secondary); font-size: 10px; font-weight: 600; padding: 4px 0; border-radius: 8px; }
+    .mnav a span { display: block; font-size: 17px; line-height: 1.2; }
+    .mnav a.on { color: var(--series-1); background: var(--lvl1); }
+    #secKpi, #secCharts, #secBrk, #secRev, #secStock { scroll-margin-top: 110px; }
+    .toast { bottom: 76px; }
+  }
+
   footer { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
   footer p { margin: 4px 0; }
   @media (max-width: 1300px) { .kpis > .kpi, .kpis > .kpi.prog { grid-column: span 6; } }
@@ -238,6 +359,7 @@
       <button type="button" data-prog="a" aria-pressed="false" title="Target A Series: Samsung Device, Detail_Cat = A SERIES">A Series</button>
       <button type="button" data-prog="r" aria-pressed="false" title="Target Racing: Samsung Device, Detail_Cat = S SERIES or Z SERIES, 5 tiers">Racing · S+Z</button>
     </span>
+    <button type="button" class="ftoggle" id="fToggle" aria-expanded="false">Filters</button>
     <label>Business unit <select id="fBu"></select></label>
     <label>LOB <select id="fLob"></select></label>
     <label>TSH <select id="fTsh"></select></label>
@@ -247,10 +369,11 @@
     <input type="search" id="fSearch" placeholder="Search store or site code…" aria-label="Search store">
   </div>
 
-  <section class="kpis" id="kpis"></section>
+  <div id="secKpi"></div><section class="kpis" id="kpis"></section>
+  <div class="swipe-hint ph-only" id="swipeHint" data-noshot></div>
   <div class="banner" id="banner" data-noshot></div>
 
-  <section class="grid2">
+  <section class="grid2" id="secCharts">
     <div class="card">
       <h2>Cumulative sales vs target pace</h2>
       <p class="note" id="paceNote"></p>
@@ -268,7 +391,7 @@
     </div>
   </section>
 
-  <section class="card table-card">
+  <section class="card table-card" id="secBrk">
     <div class="table-head">
       <div>
         <h2 id="brkTitle">Breakdown · Summit Device and A Series</h2>
@@ -288,7 +411,7 @@
     </div>
   </section>
 
-  <section class="card table-card">
+  <section class="card table-card" id="secRev">
     <div class="table-head">
       <div>
         <h2>Review · LOB → TSH → Store</h2>
@@ -300,14 +423,19 @@
           <button type="button" data-lvl="1" aria-pressed="true">TSH</button>
           <button type="button" data-lvl="2" aria-pressed="false">Store</button>
         </span>
+        <span class="seg ph-only" role="group" aria-label="View">
+          <button type="button" data-view="cards" aria-pressed="true">Cards</button>
+          <button type="button" data-view="table" aria-pressed="false">Table</button>
+        </span>
       </div>
     </div>
+    <div class="cards" id="revCards" data-noshot></div>
     <div class="tscroll">
       <table id="revTable"><thead></thead><tbody></tbody><tfoot></tfoot></table>
     </div>
   </section>
 
-  <section class="card table-card">
+  <section class="card table-card" id="secStock">
     <div class="table-head">
       <div>
         <h2>Stock analysis · Detail_Cat → model → store</h2>
@@ -333,6 +461,13 @@
     <p>Summit Device = SAMSUNG, Product_Category = Device units excluding Tablet (Detail_Cat = TABLET is left out). A Series = SAMSUNG Device with Detail_Cat = A SERIES. Racing = SAMSUNG Device with Detail_Cat = S SERIES or Z SERIES, 5 tier targets per store reached in order (tier 1 first). Stores = every store in the target files, plus every Active store (master_store_r5 STATUS = Active) in business units 1MULTIBRAND, 5JB, 6OS, 3NASA, plus every Region 5 site that sold Samsung Device this month, last month or today in those business units or an exhibition (never 7ERABLUE, never DCs); stores without a target in a view still add their sales to every total and show "no target". Racing tier is set by the month-end estimate (SUM_month_est_quantity, S+Z): under T1 = "Under T1"; passes T1 but below T2 = "Tier 2"; passes T2 but below T3 = "Tier 3"; passes T3 but below T4 = "Tier 4"; passes T4 but below T5 = "Tier 5"; passes T5 = "Above T5". Racing growth MoM index = estimate ÷ last month S+Z qty (e.g. 1.13); a store is growing when the index is above 1. Group rows (region, BU, LOB, TSH) use summed tier targets, estimates and last-month qty. MTD = SUM_quantity for completed days. Estimate = SUM_month_est_quantity (completed-day run-rate × 30). On track (MTD) = MTD ≥ target × days gone ÷ 30. On track (estimate) = estimate ≥ target. Today = PAID POS orders in sales_daily, only counted when its date is after the last completed day. Gap = target − (MTD + today). Need / day = gap ÷ days left incl. today. Cover (days) = (stock ÷ month-end estimate qty) × 30.42.</p>
   </footer>
 </div>
+<nav class="mnav" id="mnav" aria-label="Sections" data-noshot>
+  <a href="#secKpi" class="on"><span>◉</span>Summary</a>
+  <a href="#secCharts"><span>📈</span>Charts</a>
+  <a href="#secBrk"><span>▦</span>Breakdown</a>
+  <a href="#secRev"><span>🏬</span>Stores</a>
+  <a href="#secStock"><span>📦</span>Stock</a>
+</nav>
 
 <script>
 // ===== Config: the "Refresh data" button opens this repo's workflow =====
@@ -364,7 +499,10 @@ const CH_SHORT = { "SAMSUNG STORE": "SES", "ERAFONE & MORE": "E&M", "ERAFONE": "
 const chShort = (c) => CH_SHORT[c] || c;
 
 let D, STORES = [];
-const state = { mClosed: new Set(), mOpenVar: new Set(), prog: "all", bu: "", lob: "", tsh: "", q: "", store: "", pick: "", lvl: 1, open: new Set(), sortKey: "name", sortDir: "asc", brk: "bu", bSort: "achv_all", bDir: "desc" };
+const MQ = window.matchMedia("(max-width: 700px)");
+const isPhone = () => MQ.matches;
+const cardsOn = () => isPhone() && state.view === "cards";
+const state = { view: "cards", cSort: "name", mClosed: new Set(), mOpenVar: new Set(), prog: "all", bu: "", lob: "", tsh: "", q: "", store: "", pick: "", lvl: 1, open: new Set(), sortKey: "name", sortDir: "asc", brk: "bu", bSort: "achv_all", bDir: "desc" };
 
 fetch("data/summit.json", { cache: "no-store" })
   .then((r) => r.json())
@@ -547,6 +685,38 @@ function initUi() {
     else { state.sortKey = c.dataset.k; state.sortDir = c.dataset.k === "name" ? "asc" : "desc"; }
     renderReview(filtered());
   };
+  // ----- phone controls -----
+  const fBox = document.querySelector(".filters"), fT = document.getElementById("fToggle");
+  fT.onclick = () => { const o = fBox.classList.toggle("open"); fT.setAttribute("aria-expanded", o); };
+  document.querySelectorAll("[data-view]").forEach((b) => b.onclick = () => {
+    state.view = b.dataset.view;
+    document.querySelectorAll("[data-view]").forEach((x) => x.setAttribute("aria-pressed", x === b));
+    document.body.classList.toggle("cards-on", cardsOn()); renderReview(filtered());
+  });
+  const rc = document.getElementById("revCards");
+  rc.onchange = (e) => { if (e.target.id === "cSort") { state.cSort = e.target.value; renderReview(filtered()); } };
+  rc.onclick = (e) => {
+    const g = e.target.closest(".ghead[data-key]"), c = e.target.closest(".ccard[data-site]");
+    if (g) { const k = g.dataset.key; state.open.has(k) ? state.open.delete(k) : state.open.add(k); renderReview(filtered()); }
+    else if (c) { state.store = state.store === c.dataset.site ? "" : c.dataset.site; render(); }
+  };
+  document.addEventListener("click", (e) => {
+    if (!isPhone()) return;
+    const n = e.target.closest(".note, footer p");
+    if (n && !e.target.closest("button, a, select")) n.classList.toggle("open");
+  });
+  document.getElementById("kpis").addEventListener("scroll", () => { clearTimeout(swipeHint.t); swipeHint.t = setTimeout(swipeHint, 60); }, { passive: true });
+  const nav = [...document.querySelectorAll("#mnav a")];
+  const secs = nav.map((a) => document.querySelector(a.getAttribute("href")));
+  const onScroll = () => {
+    if (!isPhone()) return;
+    let i = 0; secs.forEach((sec, j) => { if (sec.getBoundingClientRect().top < 160) i = j; });
+    nav.forEach((a, j) => a.classList.toggle("on", j === i));
+  };
+  window.addEventListener("scroll", onScroll, { passive: true });
+  let wasPhone = isPhone();
+  MQ.addEventListener("change", () => { if (isPhone() !== wasPhone) { wasPhone = isPhone(); fBox.classList.remove("open"); render(); } });
+
   document.querySelector("#revTable tbody").onclick = (e) => {
     const tr = e.target.closest("tr"); if (!tr) return;
     if (tr.dataset.key) { state.open.has(tr.dataset.key) ? state.open.delete(tr.dataset.key) : state.open.add(tr.dataset.key); renderReview(filtered()); }
@@ -586,7 +756,11 @@ function setLevel(l) {
 
 // ---------- render ----------
 function render() {
+  document.body.classList.toggle("cards-on", cardsOn());
   fillSelects();
+  const nF = [state.bu, state.lob, state.tsh, state.store, state.q].filter(Boolean).length;
+  const fl = [state.bu, state.lob, state.tsh && twoWords(state.tsh), state.store, state.q && "“" + state.q + "”"].filter(Boolean);
+  document.getElementById("fToggle").innerHTML = `☰ Filters${nF ? ` <b>(${nF})</b> · ${esc(fl.join(" · "))}` : " · all stores"}`;
   const rows = filtered();
   document.getElementById("fClear").hidden = !(state.bu || state.lob || state.tsh || state.q || state.store || state.pick);
   renderKpis(scopeStores());
@@ -598,6 +772,17 @@ function render() {
   bn.innerHTML = parts.length ? `Showing only ${parts.join(" · ")} <button type="button" class="clear" id="bnClear">✕ Show all</button>` : "";
   if (parts.length) document.getElementById("bnClear").onclick = () => { state.store = ""; state.pick = ""; render(); };
   renderPace(rows); renderTsh(); renderBreakdown(rows); renderReview(rows); renderModels(rows);
+  swipeHint();
+}
+// phone: dots under the swipeable KPI cards
+function swipeHint() {
+  const k = document.getElementById("kpis"), h = document.getElementById("swipeHint");
+  if (!isPhone()) { h.innerHTML = ""; k.style.height = ""; return; }
+  const n = k.children.length, w = k.children[0] ? k.children[0].offsetWidth + 8 : 1, i = Math.round(k.scrollLeft / w);
+  // the swipe strip takes the height of the card in view (cards are re-ordered so the selected target is first)
+  const cards = [...k.children].sort((a, b) => a.offsetLeft - b.offsetLeft);
+  if (cards[i]) k.style.height = cards[i].offsetHeight + 6 + "px";
+  h.innerHTML = Array.from({ length: n }, (_, j) => `<i class="${j === i ? "on" : ""}"></i>`).join("") + ` &nbsp;swipe for more`;
 }
 
 function statusOf(pace, hasTarget) {
@@ -728,7 +913,7 @@ function niceTicks(max, n) {
 
 function renderPace(rows) {
   const svg = document.getElementById("paceChart"), box = document.getElementById("paceBox");
-  const W = 640, H = 330, m = { l: 48, r: state.prog === "r" ? 30 : 16, t: 12, b: 28 }, iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const ph = isPhone(), W = ph ? 400 : 640, H = ph ? 300 : 330, m = { l: ph ? 40 : 48, r: state.prog === "r" ? 30 : 16, t: ph ? 8 : 12, b: 28 }, iw = W - m.l - m.r, ih = H - m.t - m.b;
   const k = state.prog, ki = KI[k], o = sumMetrics(rows);
   document.getElementById("paceNote").textContent = `${PROG[k]} units · ${rows.length} store${rows.length === 1 ? "" : "s"} · completed days from sales_vs_stock, today as a separate point${k === "r" ? " · dashed lines = tier 1 pace, dotted = tiers 2–5" : ""}`;
   const perDay = new Array(D.totalDays).fill(0);
@@ -747,7 +932,9 @@ function renderPace(rows) {
   g += `<line x1="${x(-0.5)}" y1="${y(0)}" x2="${x(D.totalDays - 0.5)}" y2="${y(o.target)}" stroke="var(--target)" stroke-width="2" stroke-dasharray="5 4"/>
         ${k === "r" && o.tiers ? o.tiers.slice(1).map((tv, i) => `<line x1="${x(-0.5)}" y1="${y(0)}" x2="${x(D.totalDays - 0.5)}" y2="${y(tv)}" stroke="var(--target)" stroke-width="1" stroke-dasharray="2 4" opacity=".7"/>
           <text x="${x(D.totalDays - 0.5) + 2}" y="${y(tv) + 4}" style="font-size:10px">T${i + 2}</text>`).join("") + `<text x="${x(D.totalDays - 0.5) + 2}" y="${y(o.tiers[0]) + 4}" style="font-size:10px">T1</text>` : ""}
-        <text x="${m.l + 8}" y="${m.t + 14}" style="fill:var(--text-primary)">${paceLabel}</text>`;
+        ${ph ? "" : `<text x="${m.l + 8}" y="${m.t + 14}" style="fill:var(--text-primary)">${paceLabel}</text>`}`;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  if (ph) document.getElementById("paceNote").innerHTML = `<b>${paceLabel.replace(/<tspan[^>]*>/g, "").replace(/<\/tspan>/g, "")}</b> · ` + esc(document.getElementById("paceNote").textContent);
   const bw = Math.max(2, iw / D.totalDays - 4);
   perDay.slice(0, D.doneDays).forEach((v, i) => { if (v > 0) g += `<rect x="${x(i) - bw / 2}" y="${y(v)}" width="${bw}" height="${y(0) - y(v)}" rx="2" fill="var(--series-1-soft)"/>`; });
   if (D.doneDays) {
@@ -789,7 +976,7 @@ function renderTsh() {
   const by = new Map();
   base.forEach((s) => (by.get(s.tsh) || by.set(s.tsh, []).get(s.tsh)).push(s));
   const list = [...by].map(([tsh, ss]) => ({ tsh, ...sumMetrics(ss) })).filter((o) => o.target > 0).sort((a, b) => b.achv - a.achv);
-  const W = 440, rowH = 36, m = { l: 140, r: 92, t: 6 }, H = m.t + list.length * rowH + 22, iw = W - m.l - m.r;
+  const ph = isPhone(), W = ph ? 380 : 440, rowH = 36, m = { l: ph ? 118 : 140, r: ph ? 80 : 92, t: 6 }, H = m.t + list.length * rowH + 22, iw = W - m.l - m.r;
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
   const expFrac = D.doneDays / D.totalDays;
   const maxV = Math.max(expFrac, 0.25, ...list.map((o) => Math.max(o.achv, o.estAchv > 1.3 ? 1.3 : o.estAchv))) * 1.08;
@@ -842,6 +1029,7 @@ function coverHtml(cover, stock) {
 }
 
 function renderReview(rows) {
+  if (cardsOn()) renderCards(rows);
   if (state.prog === "r") return renderReviewRacing(rows);
   const t = document.getElementById("revTable"), P = PROG[state.prog];
   const top = topModels(rows.length ? rows : STORES);
@@ -975,6 +1163,81 @@ function renderReviewRacing(rows) {
   t.tBodies[0].innerHTML = html || `<tr><td class="l" colspan="${cols.length}">No Racing stores match the filter.</td></tr>`;
   const o = pack(rows);
   t.tFoot.innerHTML = rows.length ? `<tr><td class="l">Region / total</td><td>${fmt(o.n)}</td>${racingCells(o, false, true)}<td class="bl">${tdistHtml(o.byTier)}</td><td class="bl">${fmt(o.stock)}</td><td>${coverHtml(o.cover)}</td></tr>` : "";
+}
+
+
+// ---------- phone: store cards (LOB -> TSH -> store), same numbers as the review table ----------
+const CSORT = {
+  all: [["name", "Name A→Z"], ["achv", "MTD achievement · lowest first"], ["estAchv", "Estimate · lowest first"], ["gap", "Gap · biggest first"], ["today", "Today · lowest first"], ["cover", "Cover · lowest first"]],
+  r: [["name", "Name A→Z"], ["zone", "Tier · lowest first"], ["toT5", "Tier 5 gap · biggest first"], ["toNext", "Move-up gap · biggest first"], ["idx", "Growth index · lowest first"], ["today", "Today · lowest first"]],
+};
+function renderCards(rows) {
+  const k = state.prog, isR = k === "r", el = document.getElementById("revCards"), expFrac = D.doneDays / D.totalDays;
+  const opts = CSORT[isR ? "r" : "all"];
+  if (!opts.some((o) => o[0] === state.cSort)) state.cSort = "name";
+  const key = state.cSort, desc = ["gap", "toT5", "toNext"].includes(key);
+  const val = (name, o) => key === "name" ? name : (o[key] == null || (typeof o[key] === "number" && !isFinite(o[key])) ? (desc ? -1 : 1e12) : o[key]);
+  const sortE = (arr) => arr.sort((a, b) => { const va = val(a[0], a[1]), vb = val(b[0], b[1]); return typeof va === "string" ? va.localeCompare(vb) : (desc ? vb - va : va - vb) || a[0].localeCompare(b[0]); });
+  const day = (v) => v.toFixed(1);
+
+  const groupLines = (o) => isR
+    ? `<div class="line">Est. <b>${fmt(o.est)}</b> · MTD+today <b>${fmt(o.tot)}</b>${D.hasToday ? ` (today +${fmt(o.today)})` : ""} · index ${idxHtml(o.idx)}</div>
+       <div class="line">${o.hasTier && o.next != null ? `Gap to T${o.zone + 1} <b>${fmt(o.toNext)}</b> · <b>${day(o.needNext)}</b>/day · ` : ""}${o.hasTier ? `T5 gap <b>${fmt(o.toT5)}</b> · <b>${day(o.needT5)}</b>/day` : "no Racing target"}</div>
+       <div class="line">${tdistHtml(o.byTier)} · <span class="s-good">${o.grow}</span>/${o.n} growing</div>`
+    : `<div class="line">MTD <b>${fmt(o.mtd)}</b> / ${fmt(o.target)} · <b>${pct(o.achv)}</b> · est. <b>${pct(o.estAchv)}</b>${D.hasToday ? ` · today <b>+${fmt(o.today)}</b>` : ""}</div>
+       <div class="line">On track MTD <b>${o.onMtd}</b>/${o.withT} · gap <b>${fmt(o.gapAgg)}</b> · <b>${day(o.gapAgg / D.remDays)}</b>/day${D.hasToday ? ` · <span class="${o.inactive ? "s-crit" : ""}">${o.inactive} no sale</span>` : ""}</div>`;
+  const groupCard = (lvl, gk, label, o) => `<div class="ghead g${lvl}" ${gk ? `data-key="${esc(gk)}"` : ""}>
+      <div class="ttl"><span>${gk ? `<span class="caret">${state.open.has(gk) ? "▼" : "▶"}</span>` : ""}<span class="lvl">${["LOB", "TSH", ""][lvl] || ""}</span>${esc(label)} <span class="muted" style="font-weight:500;font-size:11px">· ${o.n} stores</span></span>
+        <span>${isR ? tierHtml(o.zone, o.hasTier) : statusHtml(statusOf(o.pace, o.target > 0))}</span></div>${groupLines(o)}</div>`;
+
+  const todayKv = (m, s) => !D.hasToday ? "—" : m.today > 0 ? "+" + fmt(m.today)
+    : `<span class="s-crit">${s.orders ? "No sale" : "No trx"}</span>`;
+  const storeCard = (s) => {
+    const m = metrics(s, k), sel = state.store === s.site ? " sel" : "";
+    const head = `<div class="top"><div><div class="nm"><span class="site">${s.site}</span>${esc(shortName(s.name))}</div>
+        <div class="sub2">${esc(chShort(s.ch))} · ${esc(twoWords(s.tsh))}</div></div>`;
+    if (isR) {
+      const ladder = m.hasTier ? `<span class="ladder">T1→T5 ${s.tiers.map((v) => m.est >= v && v > 0 ? `<b>${fmt(v)}</b>` : fmt(v)).join(" · ")}</span>` : "";
+      return `<div class="ccard lv2${sel}" data-site="${s.site}">${head}<div>${tierHtml(m.zone, m.hasTier)}</div></div>
+        <div class="big"><b>${fmt(m.est)}</b><span>est. month-end · MTD ${fmt(m.mtd)}</span></div>
+        <div class="kv">
+          <div>Today<b>${todayKv(m, s)}</b></div>
+          <div>${m.hasTier && m.next != null ? `Gap to T${m.zone + 1}` : "Move up"}<b>${!m.hasTier ? "—" : m.next != null ? fmt(m.toNext) + ` <small class="muted">${day(m.needNext)}/d</small>` : `<span class="s-good">All passed</span>`}</b></div>
+          <div>Tier 5 gap<b>${!m.hasTier ? "—" : m.toT5 > 0 ? fmt(m.toT5) + ` <small class="${D.hasToday && m.today >= m.needT5 ? "s-good" : "muted"}">${day(m.needT5)}/d</small>` : `<span class="s-good">Reached</span>`}</b></div>
+          <div>Index<b>${idxHtml(m.idx)}</b></div>
+          <div>Last month<b>${fmt(m.lm)}</b></div>
+          <div>Stock · cover<b>${fmt(m.stock)} ${coverHtml(m.cover, m.stock)}</b></div>
+        </div>${ladder}</div>`;
+    }
+    const has = m.target > 0;
+    return `<div class="ccard lv2${sel}" data-site="${s.site}">${head}<div>${statusHtml(statusOf(m.pace, has))}</div></div>
+      <div class="big"><b>${has ? pct(m.achv) : fmt(m.mtd)}</b><span>${has ? `MTD ${fmt(m.mtd)} / ${fmt(m.target)}` : "MTD units · no target"}</span></div>
+      ${has ? `<div class="bar"><i style="width:${Math.min(100, (m.achv || 0) * 100)}%"></i><b style="left:${expFrac * 100}%"></b><u style="left:${Math.min(100, (m.estAchv || 0) * 100)}%"></u></div>` : ""}
+      <div class="kv">
+        <div>Today<b>${todayKv(m, s)}</b></div>
+        <div>Est. month-end<b>${fmt(m.est)} ${has ? `<small class="${m.onEst ? "s-good" : "s-crit"}">${pct(m.estAchv)}</small>` : ""}</b></div>
+        <div>Gap · per day<b>${has ? `${fmt(m.gap)} <small class="muted">${day(m.need)}/d</small>` : "—"}</b></div>
+        <div>Stock<b>${fmt(m.stock)}</b></div>
+        <div>Cover<b>${coverHtml(m.cover, m.stock)}</b></div>
+        <div>Stock vs gap<b>${!has ? "—" : m.gap === 0 ? `<span class="s-good">Hit</span>` : m.stock >= m.gap ? `<span class="s-good">Covered</span>` : `<span class="s-crit">Short ${fmt(m.gap - m.stock)}</span>`}</b></div>
+      </div></div>`;
+  };
+
+  const tree = new Map();
+  rows.forEach((s) => { const l = tree.get(s.lob) || tree.set(s.lob, new Map()).get(s.lob); (l.get(s.tsh) || l.set(s.tsh, []).get(s.tsh)).push(s); });
+  let html = `<div class="cards-tools">Sort <select id="cSort">${opts.map(([v, l]) => `<option value="${v}"${v === key ? " selected" : ""}>${l}</option>`).join("")}</select></div>`;
+  if (rows.length) html += groupCard(2, "", isR ? "Racing · total" : PROG[k] + " · total", sumMetrics(rows, k));
+  sortE([...tree].map(([lob, tshs]) => { const ss = [...tshs.values()].flat(); return [lob, { ...sumMetrics(ss, k), tshs }]; })).forEach(([lob, ol]) => {
+    html += groupCard(0, lob, lob, ol);
+    if (!state.open.has(lob)) return;
+    sortE([...ol.tshs].map(([tsh, ss]) => [tsh, { ...sumMetrics(ss, k), ss }])).forEach(([tsh, ot]) => {
+      const kt = lob + "|" + tsh;
+      html += groupCard(1, kt, tsh, ot);
+      if (!state.open.has(kt)) return;
+      sortE(ot.ss.map((s) => [s.name, { ...metrics(s, k), s }])).forEach(([, o]) => html += storeCard(o.s));
+    });
+  });
+  el.innerHTML = rows.length ? html : html + `<p class="note" style="padding:0 12px">No stores match the filter.</p>`;
 }
 
 // ---------- breakdown table (like iP18 vs iP17): both targets side by side ----------
