@@ -1,21 +1,23 @@
 # Samsung Targets · Summit · A Series · Racing — November dashboard (Erajaya Region 5)
 
 A static web dashboard (GitHub Pages) using **import mode** like Power BI. One BigQuery query pulls a small,
-pre-aggregated extract (`data/summit.json`, about 75 KB). Every filter, drill-down and hover then runs in the
-browser at **zero BigQuery cost**. Data only changes when you press **Run workflow**.
+pre-aggregated extract (`data/<page>.json`, about 75 KB). Every filter, drill-down and hover then runs in the
+browser at **zero BigQuery cost**. Data changes on each refresh (automatic 12:15, 14:15, 16:15, 17:45 WIB, or **Run workflow**).
 
 It works the same way as `sbd_vivo` and `ip18-vs-ip17`.
 
 | File | What it is |
 |---|---|
-| `index.html` | The dashboard (no external libraries) |
-| `data/summit.json` | The imported extract |
+| `index.html` | Menu page linking the four dashboards |
+| `dashboard.html` | The dashboard template (no external libraries); built into summit / aseries / racing / pesta .html |
+| `data/<page>.json` | The imported extract, one file per dashboard |
+| `scripts/split_data.py` | Splits the query result into the four data files |
+| `scripts/build_pages.py` | Builds the four pages + menu for GitHub Pages |
 | `sql/import.sql` | The single import query. **Edit the period here** (`DATE '2026-11-01'` / `DATE '2026-11-30'`) |
-| `scripts/refresh.py` | Dry-runs the query (cost check), runs it with a 1 GB billing cap, writes `data/summit.json` |
+| `scripts/refresh.py` | Dry-runs the query (cost check), runs it with a 1 GB billing cap, writes `data/<page>.json` |
 | `.github/workflows/refresh.yml` | The "Refresh data" workflow + Pages deploy |
 
-**Cost per refresh:** about 0.18 GB scanned. That's roughly Rp 20 on demand, or free within BigQuery's 1 TB/month free tier.
-You can refresh many times a day.
+**Cost per refresh:** about 0.34 GB scanned (one query for all four dashboards), free within BigQuery's 1 TB/month free tier.
 
 ---
 
@@ -25,15 +27,15 @@ You can refresh many times a day.
 2. **Settings → Secrets and variables → Actions → New repository secret.** Name: `GCP_SA_KEY`. Value: the same service-account
    JSON key you use for `sbd_vivo` (it needs **BigQuery Data Viewer** + **BigQuery Job User** on `e-smart-433113`).
 3. **Settings → Pages → Build and deployment → Source: GitHub Actions.**
-4. If your repo has a different name, change `const GITHUB_REPO = "rcm5DaMon/samsung_summit";` near the top of the script in `index.html`.
+4. If your repo has a different name, change `const GITHUB_REPO = "rcm5DaMon/samsung_summit";` near the top of the script in `dashboard.html`.
 5. **Actions → Refresh data → Run workflow.** After about 1 minute the site is live at
    `https://rcm5damon.github.io/samsung_summit/`.
 
 ## Daily use
 - **Refresh:** click **Refresh data ↗** on the page, then **Run workflow**. Wait about 1 minute and reload.
   Each refresh picks up the latest `sales_vs_stock` day, the latest stock snapshot, and today's POS from `sales_daily`.
-- **Automatic refresh:** uncomment the `schedule` block in `.github/workflows/refresh.yml`. Cron is in UTC, so
-  `"0 1,5,9 * * *"` = 08:00, 12:00 and 16:00 WIB.
+- **Automatic refresh:** runs every day at 12:15, 14:15, 16:15 and 17:45 WIB (`schedule` in `.github/workflows/refresh.yml`,
+  cron in UTC: `15 5`, `15 7`, `15 9`, `45 10`). To change the times, subtract 7 hours from WIB. Each run is one query (~0.2 GB).
 - **New targets or a new month:** update the two target tables in BigQuery, change the two dates in `sql/import.sql`,
   then run the workflow.
 
@@ -101,6 +103,31 @@ You can refresh many times a day.
 GitHub Pages sites are **public** unless your org has GitHub Enterprise Cloud with private Pages.
 Anyone with the URL can see store names and figures.
 
-## Phone layout
+## Pages (one dashboard per target)
 
-On screens up to 700 px wide (phones) the same page switches layout automatically: compact header; a sticky bar with the target switch (Summit / A Series / Racing) and a **☰ Filters** button that folds out BU / LOB / TSH / Store / search; KPI cards you swipe left and right (the selected target first); store **cards** instead of the wide review table (LOB → TSH → store, tap a group to open it, tap a store to focus the page on it, sort picker; a **Table** button switches back to the table); wide tables keep the name column fixed while you scroll sideways; long notes show 2 lines (tap to read all); a bottom bar jumps to Summary · Charts · Breakdown · Stores · Stock. Desktop is unchanged.
+| Link | Shows | Data file |
+|---|---|---|
+| `index.html` | menu with the four dashboards (no data) | – |
+| `summit.html` | Summit Device (Samsung Device excl. Tablet) | `data/<page>.json` |
+| `aseries.html` | A Series | `data/aseries.json` |
+| `racing.html` | Racing S+Z (tiers, growth MoM) | `data/racing.json` |
+| `pesta.html` | Pesta Akhir Tahun (qty + value, 16–30 Nov / December) | `data/pesta.json` |
+
+- Still **one BigQuery query** per refresh; `scripts/split_data.py` cuts the result into the four data files, so each
+  page only carries its own targets and sales.
+- The four pages are built from one template, **`dashboard.html`**, by `scripts/build_pages.py` in the deploy job.
+  To change the dashboard, edit `dashboard.html` only. To test locally: `dashboard.html?page=racing`.
+- **Phones** show the desktop layout zoomed out (fixed 1280 px page width); pinch to zoom in.
+
+## Pesta Akhir Tahun
+
+4th tab. Target table `master_data.target_samsung_pesta_akhir_tahun` (target_qty + target_value per store per month).
+
+- **Products:** all Samsung Device, **including Tablet**.
+- **Program window:** November part = **16–30 Nov 2026** (15 days), December part = **1–31 Dec 2026**. Switch with the
+  **16–30 Nov / December** buttons (December unlocks once December data arrives; from December the page opens on Pesta).
+- **Qty / Value (Rp):** qty MTD = `SUM_quantity`; value MTD = `SUM_total_nett_amount_with_tax`. Today (POS) = `sales_daily`
+  PAID `Quantity` / `Total Amount`.
+- **Estimate:** November = MTD ÷ days passed × 15; December = `SUM_month_est_quantity` / `SUM_month_est_nett_with_tax`.
+- Value amounts show as **M** (miliar) and **jt** (juta). Stock, cover and "stock vs gap" always stay in units.
+- Dates live in `sql/import.sql` (`pp` = Pesta windows); change them there if the program dates move.
