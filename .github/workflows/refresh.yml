@@ -2,8 +2,8 @@ name: Refresh data
 
 # Manual refresh: Actions tab -> "Refresh data" -> "Run workflow" (one BigQuery query, ~0.2 GB scan).
 # A push to main (e.g. you edit index.html or sql/import.sql) only redeploys the site, no query.
-# Automatic refresh every day at 12:15, 14:15 and 17:45 WIB (schedule below).
-# Cron is in UTC, WIB = UTC+7: 05:15 UTC = 12:15 WIB, 07:15 UTC = 14:15 WIB, 10:45 UTC = 17:45 WIB.
+# Automatic refresh every day at 12:15, 14:15, 16:15 and 17:45 WIB (schedule below).
+# Cron is in UTC, WIB = UTC+7: 05:15 UTC = 12:15 WIB, 07:15 UTC = 14:15 WIB, 09:15 UTC = 16:15 WIB, 10:45 UTC = 17:45 WIB.
 # GitHub may start a scheduled run a few minutes late when it is busy.
 on:
   workflow_dispatch:
@@ -12,6 +12,7 @@ on:
   schedule:
     - cron: "15 5 * * *"    # 12:15 WIB
     - cron: "15 7 * * *"    # 14:15 WIB
+    - cron: "15 9 * * *"    # 16:15 WIB
     - cron: "45 10 * * *"   # 17:45 WIB
 
 permissions:
