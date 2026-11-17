@@ -1,7 +1,7 @@
 name: Refresh data
 
 # Manual refresh: Actions tab -> "Refresh data" -> "Run workflow" (one BigQuery query, ~0.2 GB scan).
-# A push to main (e.g. you edit index.html or sql/import.sql) only redeploys the site, no query.
+# A push to main (e.g. you edit dashboard.html or sql/import.sql) only redeploys the site, no query.
 # Automatic refresh every day at 12:15, 14:15, 16:15 and 17:45 WIB (schedule below).
 # Cron is in UTC, WIB = UTC+7: 05:15 UTC = 12:15 WIB, 07:15 UTC = 14:15 WIB, 09:15 UTC = 16:15 WIB, 10:45 UTC = 17:45 WIB.
 # GitHub may start a scheduled run a few minutes late when it is busy.
@@ -49,7 +49,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
-          git add data/summit.json
+          git add data/*.json
           if git diff --cached --quiet; then
             echo "No change in data."
           else
@@ -68,11 +68,9 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: main
-      - name: Collect site files
-        run: |
-          mkdir -p _site/data
-          cp index.html _site/
-          cp data/summit.json _site/data/
+      # one page per target (summit / aseries / racing / pesta) from dashboard.html + the index menu + data
+      - name: Build site
+        run: python3 scripts/build_pages.py _site
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
