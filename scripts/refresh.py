@@ -1,4 +1,4 @@
-"""Import mode refresh: run ONE BigQuery query and write data/summit.json.
+"""Import mode refresh: run ONE BigQuery query and write data/<page>.json for the four dashboard pages.
 
 Runs in GitHub Actions (see .github/workflows/refresh.yml). Credentials come from
 the GCP_SA_KEY secret via google-github-actions/auth, so nothing secret is in the repo.
@@ -46,8 +46,13 @@ mtd_a = sum(int(r.split("|")[3]) for r in data["daily"])
 print(f"Billed {job.total_bytes_billed / 1e9:.2f} GB · {len(data['targets'])} stores · "
       f"sales to {data['sales_asof']} · today {data['today_date'] or '-'} {data['today_last_time'] or ''}")
 print(f"Summit Device: MTD {mtd_all:,} / target {t_all:,} · A Series: MTD {mtd_a:,} / target {t_a:,}")
+pt = [r.split("|") for r in data["targets"]]
+pdq = sum(int(r.split("|")[2]) for r in data.get("pdaily", []))
+pdv = sum(int(r.split("|")[3]) for r in data.get("pdaily", []))
+print(f"Pesta Akhir Tahun: qty 16 Nov-31 Dec {pdq:,} · value Rp {pdv:,} · "
+      f"targets Nov {sum(int(r[17]) for r in pt):,} / Rp {sum(int(r[18]) for r in pt):,} · Dec {sum(int(r[19]) for r in pt):,} / Rp {sum(int(r[20]) for r in pt):,}")
 
-out = ROOT / "data" / "summit.json"
-out.parent.mkdir(exist_ok=True)
-out.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-print(f"Wrote {out.relative_to(ROOT)} ({out.stat().st_size / 1024:.1f} KB)")
+# one data file per dashboard page (summit / aseries / racing / pesta): each page only carries its own numbers
+sys.path.insert(0, str(ROOT / "scripts"))
+from split_data import write_all  # noqa: E402
+write_all(data, ROOT / "data")
