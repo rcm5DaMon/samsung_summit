@@ -117,6 +117,8 @@ Anyone with the URL can see store names and figures.
   page only carries its own targets and sales.
 - The four pages are built from one template, **`dashboard.html`**, by `scripts/build_pages.py` in the deploy job.
   To change the dashboard, edit `dashboard.html` only. To test locally: `dashboard.html?page=racing`.
+- Each page has the tab bar **Summit Device · A Series · Racing · S+Z · Pesta Akhir Tahun**; the tabs are links to the
+  other pages and carry the BU / LOB / TSH / store filter along (in the link, e.g. `racing.html#bu=3NASA`).
 - **Phones** show the desktop layout zoomed out (fixed 1280 px page width); pinch to zoom in.
 
 ## Pesta Akhir Tahun

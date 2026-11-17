@@ -112,6 +112,10 @@
   .seg button { font: inherit; font-size: 13px; background: var(--surface-0); color: var(--text-secondary); border: 0;
                 padding: 5px 12px; cursor: pointer; }
   .seg button[aria-pressed="true"] { background: var(--series-1); color: #fff; font-weight: 600; }
+  /* dashboard tabs: links to the other pages (each page loads only its own data) */
+  .seg a { font-size: 13px; background: var(--surface-0); color: var(--text-secondary); padding: 5px 12px; text-decoration: none; white-space: nowrap; }
+  .seg a:hover { color: var(--series-1); }
+  .seg a[aria-current="page"] { background: var(--series-1); color: #fff; font-weight: 600; }
   .spacer { flex: 1; }
   .clear { font: inherit; font-size: 12px; color: var(--text-secondary); background: none; border: 1px solid var(--border);
            border-radius: 8px; padding: 4px 8px; cursor: pointer; }
@@ -357,7 +361,7 @@
   </header>
 
   <div class="filters" role="group" aria-label="Filters">
-    <!-- one target per page: summit.html / aseries.html / racing.html / pesta.html -->
+    <span class="seg" id="navTabs" role="navigation" aria-label="Dashboards"></span>
     <span class="seg pesta-only" role="group" aria-label="Pesta measure">
       <button type="button" data-pmeas="p" aria-pressed="true" title="Quantity: SUM_quantity">Qty</button>
       <button type="button" data-pmeas="pv" aria-pressed="false" title="Value: SUM_total_nett_amount_with_tax (Rp)">Value (Rp)</button>
@@ -489,6 +493,24 @@ const PAGES = {
   pesta:   { prog: "p",   title: "Pesta Akhir Tahun", sub: "Pesta Akhir Tahun", h1: null },
 };
 const CFG = PAGES[PAGE] || PAGES.summit;
+const NAV = [["summit", "Summit Device"], ["aseries", "A Series"], ["racing", "Racing · S+Z"], ["pesta", "Pesta Akhir Tahun"]];
+// built pages are summit.html etc.; the raw template (local testing) uses dashboard.html?page=…
+const pageUrl = (pg) => "__PAGE__".startsWith("__") ? `dashboard.html?page=${pg}` : `${pg}.html`;
+// the BU / LOB / TSH / store / search filter travels to the other dashboards in the link (#bu=…&lob=…)
+function navHash() {
+  const h = new URLSearchParams();
+  ["bu", "lob", "tsh", "store", "q"].forEach((k) => { if (state[k]) h.set(k, state[k]); });
+  const str = h.toString(); return str ? "#" + str : "";
+}
+function renderNav() {
+  document.getElementById("navTabs").innerHTML = NAV.map(([pg, label]) =>
+    `<a href="${pageUrl(pg)}${navHash()}"${pg === PAGE ? ' aria-current="page"' : ""}>${label}</a>`).join("");
+}
+function readHash() {
+  const h = new URLSearchParams(location.hash.slice(1));
+  ["bu", "lob", "tsh", "store", "q"].forEach((k) => { if (h.get(k)) state[k] = h.get(k); });
+  if (state.q) document.getElementById("fSearch").value = state.q;
+}
 
 const PROG = { all: "Summit Device (excl. Tablet)", a: "A Series", r: "Racing (S+Z)", p: "Pesta Akhir Tahun · qty", pv: "Pesta Akhir Tahun · value" };
 const KI = { all: 0, a: 1, r: 2, p: 0, pv: 1 };          // index into each store's daily [all, a, r] / Pesta daily [qty, value]
@@ -532,7 +554,7 @@ const state = { pm: 11, view: "cards", cSort: "name", mClosed: new Set(), mOpenV
 
 fetch(`data/${PAGE}.json`, { cache: "no-store" })
   .then((r) => r.json())
-  .then((json) => { D = prep(json); state.prog = CFG.prog; state.pm = D.pmDefault; state.pmeas = "p"; initUi(); render(); })
+  .then((json) => { D = prep(json); state.prog = CFG.prog; state.pm = D.pmDefault; state.pmeas = "p"; readHash(); initUi(); render(); })
   .catch((e) => { document.getElementById("sub").textContent = `Could not load data/${PAGE}.json - ` + e; });
 
 // ---------- data ----------
@@ -836,6 +858,7 @@ const longDate = (s) => (typeof s === "string" ? parseDate(s) : s).toLocaleDateS
 // ---------- render ----------
 function render() {
   applyPeriod();
+  renderNav();
   const pesta = isP();
   document.body.classList.toggle("pesta", pesta);
   document.querySelectorAll("[data-prog]").forEach((x) => x.setAttribute("aria-pressed", x.dataset.prog === (pesta ? "p" : state.prog)));
