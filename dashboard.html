@@ -524,7 +524,7 @@ const progCat = (cat, k = state.prog) => isP(k) ? true : k === "all" ? cat !== "
 function tierOf(v, tiers) { let t = 0; tiers.forEach((x, i) => { if (x > 0 && v >= x) t = i + 1; }); return t; }
 const TIER_LBL = ["Under T1", "Tier 2", "Tier 3", "Tier 4", "Tier 5", "Above T5"];
 const tierHtml = (z, has = true) => !has || z == null ? `<span class="muted">—</span>` : `<span class="tier t${z}">${TIER_LBL[z]}</span>`;
-const tdistHtml = (by) => `<span class="tdist">${by.map((n, i) => `<i class="tier t${i}${n ? "" : " z"}" title="${TIER_LBL[i]}: ${n} store${n === 1 ? "" : "s"} (MTD)">${n}</i>`).join("")}</span>`;
+const tdistHtml = (by) => `<span class="tdist">${by.map((n, i) => `<i class="tier t${i}${n ? "" : " z"}" title="${TIER_LBL[i]}: ${n} store${n === 1 ? "" : "s"} (by estimate)">${n}</i>`).join("")}</span>`;
 const CAT = { A: "A Series", S: "S Series", Z: "Z Series", T: "Tablet", X: "Other" };
 const nf = new Intl.NumberFormat("id-ID");
 const fmt = (n) => nf.format(Math.round(n));
@@ -653,9 +653,12 @@ function applyPeriod() {
 
 // per-store metrics for the selected target
 function metrics(s, k = state.prog) {
-  const target = s.t[k], mtd = s.mtd[k], today = s.today[k], tot = mtd + today, est = s.est[k], stock = s.stock[k];
+  // the estimate is counted in whole units (as shown on the page), so tier / on-track use the same number people see:
+  // a store estimated at 7.8 shows "8" and reaches a target of 8. Value (Rp) is kept as is.
+  const est = k === "pv" ? s.est[k] : Math.round(s.est[k]);
+  const target = s.t[k], mtd = s.mtd[k], today = s.today[k], tot = mtd + today, stock = s.stock[k];
   // stock is always in units: for the value view, cover and "stock vs gap" use the qty estimate / qty gap
-  const estQ = k === "pv" ? s.est.p : est, gapQ = k === "pv" ? Math.max(0, s.t.p - (s.mtd.p + s.today.p)) : Math.max(0, target - tot);
+  const estQ = k === "pv" ? Math.round(s.est.p) : est, gapQ = k === "pv" ? Math.max(0, s.t.p - (s.mtd.p + s.today.p)) : Math.max(0, target - tot);
   const exp = target * D.doneDays / D.totalDays;
   const pace = target ? (exp ? mtd / exp : 1) : null;
   const gap = Math.max(0, target - tot);
