@@ -434,6 +434,7 @@
           <button type="button" data-lvl="1" aria-pressed="true">TSH</button>
           <button type="button" data-lvl="2" aria-pressed="false">Store</button>
         </span>
+        <button type="button" class="btn-ghost" id="storeCsv" title="Download every store in the current filter with its numbers for this dashboard as CSV (opens in Excel)">⬇ Store list CSV</button>
         <span class="seg ph-only" role="group" aria-label="View">
           <button type="button" data-view="cards" aria-pressed="true">Cards</button>
           <button type="button" data-view="table" aria-pressed="false">Table</button>
@@ -746,6 +747,7 @@ function initUi() {
     renderModels(filtered());
   });
   document.getElementById("stockCsv").onclick = () => stockCsv(filtered());
+  document.getElementById("storeCsv").onclick = () => storeCsv(filtered());
   document.querySelectorAll("[data-brk]").forEach((b) => b.onclick = () => {
     state.brk = b.dataset.brk;
     document.querySelectorAll("[data-brk]").forEach((x) => x.setAttribute("aria-pressed", x === b));
@@ -1561,6 +1563,60 @@ function storeStockRow(r, tot) {
     <td class="bl l muted" style="text-align:right">${esc(twoWords(s.tsh))}</td>
     <td>${out ? `<span class="status s-crit"><i class="dot"></i>Out of stock</span>` : ""}</td>
     <td class="l bl">${hl}</td></tr>`;
+}
+// CSV export: the store list in the current filter (BU / LOB / TSH / store / search / KPI pick) with this dashboard's numbers
+function storeCsv(rows) {
+  const k = state.prog, pesta = isP(k), racing = k === "r";
+  const q = (v) => v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v;
+  const r0 = (v) => v == null || !isFinite(v) ? "" : Math.round(v);
+  const r1 = (v) => v == null || !isFinite(v) ? "" : v.toFixed(1);
+  const pc = (v) => v == null || !isFinite(v) ? "" : Math.round(v * 100) + "%";
+  const cov = (c) => c == null ? "" : isFinite(c) ? Math.floor(c) : "no sales";
+  const todayTxt = (m, s) => !D.hasToday ? "" : m.today > 0 ? "Yes" : s.orders ? "No Samsung sale" : "No transaction";
+  const vsGap = (m) => !m.target ? "" : m.gapQ === 0 ? "Target hit" : m.stock >= m.gapQ ? "Covered" : `Short ${m.gapQ - m.stock}`;
+  // one block of target columns (Summit / A Series, or Pesta qty, or Pesta value)
+  // lbl = " qty" / " value"; amount columns of the value block also say (Rp)
+  const blk = (lbl, rp = "") => [`Target${lbl}${rp}`, `MTD${lbl}${rp}`, `Achv MTD${lbl}`, `Status MTD${lbl}`, `Today${lbl}${rp}`, `MTD + today${lbl}${rp}`,
+    `Est. end${lbl}${rp}`, `Est. achv${lbl}`, `On track est.${lbl}`, `Gap${lbl}${rp}`, `Need per day${lbl}${rp}`];
+  const blkRow = (m, money) => {
+    const n = money ? r0 : (v) => r0(v), d = money ? r0 : r1;
+    return [n(m.target), n(m.mtd), pc(m.achv), statusOf(m.pace, m.target > 0)[1], D.hasToday ? n(m.today) : "", n(m.tot),
+      n(m.est), pc(m.estAchv), m.target ? (m.onEst ? "Yes" : "No") : "", n(m.gap), m.target ? d(m.need) : ""];
+  };
+  const base = ["Site", "Store", "Business unit", "Channel", "LOB", "TSH"];
+  const head = racing
+    ? [...base, "Tier 1", "Tier 2", "Tier 3", "Tier 4", "Tier 5", "MTD S+Z", "Today", "MTD + today", "Est. month-end", "Tier (est.)",
+       "Next tier target", "Gap to next tier", "Need per day (next)", "Gap to Tier 5", "Need per day (T5)", "Last month S+Z", "Growth index", "Growing",
+       "Store stock", "Cover days", "Sale today"]
+    : pesta
+      ? [...base, ...blk(" qty"), ...blk(" value", " (Rp)"), "Store stock", "Cover days", "Stock vs gap (qty)", "Sale today"]
+      : [...base, ...blk(""), "Store stock", "Cover days", "Stock vs gap", "Sale today"];
+  const lines = [head.join(",")];
+  [...rows].sort((a, b) => a.lob.localeCompare(b.lob) || a.tsh.localeCompare(b.tsh) || a.name.localeCompare(b.name)).forEach((s) => {
+    const info = [s.site, s.name, s.bu, s.ch, s.lob, s.tsh];
+    let row;
+    if (racing) {
+      const m = metrics(s, "r"), t = m.hasTier;
+      row = [...info, ...s.tiers.map(r0), r0(m.mtd), D.hasToday ? r0(m.today) : "", r0(m.tot), r0(m.est), t ? TIER_LBL[m.zone] : "No target",
+        t && m.next != null ? r0(m.next) : "", t && m.next != null ? r0(m.toNext) : "", t && m.next != null ? r1(m.needNext) : "",
+        t ? r0(m.toT5) : "", t && m.toT5 > 0 ? r1(m.needT5) : "", r0(m.lm), m.idx == null ? "new" : m.idx.toFixed(2), m.idx == null ? "" : m.grow ? "Yes" : "No",
+        r0(m.stock), cov(m.cover), todayTxt(m, s)];
+    } else if (pesta) {
+      const mq = metrics(s, "p"), mv = metrics(s, "pv");
+      row = [...info, ...blkRow(mq, false), ...blkRow(mv, true), r0(mq.stock), cov(mq.cover), vsGap(mq), todayTxt(mq, s)];
+    } else {
+      const m = metrics(s, k);
+      row = [...info, ...blkRow(m, false), r0(m.stock), cov(m.cover), vsGap(m), todayTxt(m, s)];
+    }
+    lines.push(row.map(q).join(","));
+  });
+  const blob = new Blob(["\ufeff" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a"), now = new Date(), p = (n) => String(n).padStart(2, "0");
+  const per = pesta ? (state.pm === 11 ? "16-30Nov" : "Dec") : "Nov";
+  a.href = URL.createObjectURL(blob);
+  a.download = `Samsung_store_list_${CFG.title.replace(/\W+/g, "_")}_${per}_${now.getFullYear()}${p(now.getMonth() + 1)}${p(now.getDate())}.csv`;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  toast(`Downloaded ${lines.length - 1} stores`);
 }
 // CSV export: every store x variant row in the current filter
 function stockCsv(rows) {
